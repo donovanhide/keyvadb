@@ -76,6 +76,9 @@ func (t *Tree) add(n *Node, v ValueSlice) error {
 }
 
 func (t *Tree) Add(values ValueSlice) error {
+	if !values.IsSorted() {
+		return fmt.Errorf("unsorted values provided")
+	}
 	return t.add(t.root, values)
 }
 

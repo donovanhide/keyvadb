@@ -21,10 +21,8 @@ func (v Value) String() string {
 func (v ValueSlice) Len() int           { return len(v) }
 func (v ValueSlice) Less(i, j int) bool { return bytes.Compare(v[i].Key[:], v[j].Key[:]) < 0 }
 func (v ValueSlice) Swap(i, j int)      { v[i], v[j] = v[j], v[i] }
-
-func (v ValueSlice) Sort() {
-	sort.Sort(v)
-}
+func (v ValueSlice) Sort()              { sort.Sort(v) }
+func (v ValueSlice) IsSorted() bool     { return sort.IsSorted(v) }
 
 // Returns all values in v between, but not including start and end
 func (v ValueSlice) GetRange(start, end Hash) ValueSlice {

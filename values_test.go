@@ -1,37 +1,10 @@
 package keyva
 
-import (
-	"crypto/sha512"
-	"encoding/binary"
-	"io"
-
-	. "gopkg.in/check.v1"
-)
-
-// Deterministically create new random ValueSlice
-// Keys are SHA512Half of value
-func newRandomValues(n int, minValue, maxValue uint16, r io.Reader) (ValueSlice, error) {
-	values := make(ValueSlice, n)
-	hasher := sha512.New()
-	for i := 0; i < n; i++ {
-		var length uint16
-		if err := binary.Read(r, binary.BigEndian, &length); err != nil {
-			return nil, err
-		}
-		length = (length % (maxValue - minValue)) + minValue
-		values[i].Value = make([]byte, int(length))
-		if _, err := r.Read(values[i].Value[:]); err != nil {
-			return nil, err
-		}
-		hasher.Write(values[i].Value)
-		copy(values[i].Key[:], hasher.Sum(nil))
-		hasher.Reset()
-	}
-	return values, nil
-}
+import . "gopkg.in/check.v1"
 
 func (s *KeyVaSuite) TestValues(c *C) {
-	values, err := newRandomValues(100, 100, 500, s.R)
+	gen := NewRandomValueGenerator(100, 500, s.R)
+	values, err := gen.Take(100)
 	c.Check(err, IsNil)
 	values.Sort()
 	c.Assert(values[0].Key.String(), Equals, "0033F3A564EA5A6A5DA1CA4C13DE4243081771717FFFB0D81CF7ACC75652063F")
