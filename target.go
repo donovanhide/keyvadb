@@ -10,7 +10,7 @@ type Target struct {
 type TargetSlice []Target
 
 func NewTargetSlice(start, end Hash, keys HashSlice) TargetSlice {
-	stride := start.Stride(end, int64(len(keys)))
+	stride := start.Stride(end, int64(len(keys))+1)
 	cursor := start.Add(stride)
 	var targets TargetSlice
 	for i, key := range keys {

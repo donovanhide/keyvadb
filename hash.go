@@ -18,6 +18,7 @@ func (s HashSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s HashSlice) Less(i, j int) bool { return s[i].Compare(s[j]) < 0 }
 func (s HashSlice) Sort()              { sort.Sort(s) }
 func (s HashSlice) IsSorted() bool     { return sort.IsSorted(s) }
+func (s HashSlice) String() string     { return dumpWithTitle("Hashes", s, 0) }
 
 func MustHash(s string) Hash {
 	b, err := hex.DecodeString(s)

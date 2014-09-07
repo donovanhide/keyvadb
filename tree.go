@@ -46,10 +46,10 @@ func (t *Tree) add(n *Node, v ValueSlice) error {
 		n.Values[neighbour.Index] = neighbour.Id
 	}
 	childrenRanges := n.Ranges()
-	for i := 1; i <= ChildCount; i++ {
-		childStart, childEnd := childrenRanges[i-1], childrenRanges[i]
-		if childEnd == EmptyItem {
-			break
+	for i := 0; i < ChildCount; i++ {
+		childStart, childEnd := childrenRanges[i], childrenRanges[i+1]
+		if childStart == EmptyItem || childEnd == EmptyItem {
+			continue
 		}
 		candidates := v.GetRange(childStart, childEnd)
 		if len(candidates) == 0 {
@@ -57,9 +57,9 @@ func (t *Tree) add(n *Node, v ValueSlice) error {
 		}
 		var child *Node
 		var err error
-		if id := n.Children[i-1]; id == EmptyChild {
+		if id := n.Children[i]; id == EmptyChild {
 			child, err = t.keys.New(childStart, childEnd)
-			n.Children[i-1] = child.Id
+			n.Children[i] = child.Id
 		} else {
 			child, err = t.keys.Get(id)
 		}
