@@ -49,6 +49,10 @@ func newHash(n *big.Int) Hash {
 	}
 }
 
+func (h Hash) Empty() bool {
+	return h.Equals(EmptyItem)
+}
+
 func (a Hash) Compare(b Hash) int {
 	return bytes.Compare(a[:], b[:])
 }

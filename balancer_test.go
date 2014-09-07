@@ -12,18 +12,19 @@ var neighbourValues = ValueSlice{
 	{0, MustHash("011974AD2AF411A6650DB7591DFFB51C645388F78FFC1BBCD73AE2C860602559"), []byte(nil)},
 }
 
-var balancers = []Balancer{
-	&NaiveBalancer{},
-	&MatchingBalancer{},
+var balancers = map[string]Balancer{
+	"Random":   &RandomBalancer{},
+	"Naive":    &NaiveBalancer{},
+	"Matching": &MatchingBalancer{},
 }
 
 func (s *KeyVaSuite) TestBalancers(c *C) {
-	for _, balancer := range balancers {
+	for name, balancer := range balancers {
 		node := &Node{
 			Start: MustHash("0000000000000000000000000000000000000000000000000000000000000001"),
 			End:   MustHash("0300000000000000000000000000000000000000000000000000000000000000"),
 		}
 		neighbours := balancer.Balance(node, neighbourValues)
-		c.Assert(neighbours.SanityCheck(), Equals, true)
+		c.Check(neighbours.SanityCheck(), Equals, true, Commentf("%s is not sane", name))
 	}
 }

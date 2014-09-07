@@ -1,12 +1,61 @@
 package keyva
 
-import "sort"
+import (
+	"fmt"
+	"math/rand"
+	"sort"
+)
 
+type RandomBalancer struct{}
 type NaiveBalancer struct{}
 type MatchingBalancer struct{}
 
-func (b *NaiveBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
+func (b *RandomBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
 	var neighbours NeighbourSlice
+	r := rand.New(rand.NewSource(int64(n.Id)))
+	for _, empty := range n.EmptyRanges() {
+		sub := v.GetRange(empty.Start, empty.End)
+		length := empty.EndIndex - empty.StartIndex
+		if length > len(sub) {
+			length = len(sub)
+		}
+		selection := r.Perm(len(sub))[:length]
+		sort.Ints(selection)
+		// fmt.Println(empty)
+		// fmt.Println(selection)
+		j := 0
+		for i := empty.StartIndex; j < length && i < empty.EndIndex; i++ {
+			// fmt.Println(sub[selection[j]].Key)
+			neighbours = append(neighbours, Neighbour{
+				Id:    sub[selection[j]].Id,
+				Key:   sub[selection[j]].Key,
+				Index: i,
+			})
+			j++
+		}
+	}
+	neighbours.SortByIndex()
+	return neighbours
+}
+
+func (b *NaiveBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
+	median := v[len(v)/2]
+	occupancy := n.Occupancy()
+	length := ItemCount - n.Occupancy()
+	swing := median.Key.Distance(n.Start).Compare(median.Key.Distance(n.End))
+	fmt.Println(median.Key, length, swing)
+	neighbours := make(NeighbourSlice, length)
+	if occupancy == 0 {
+		// 	if swing <= 0 {
+		// 		for i := 0; i < length; i++ {
+		// 			neighbours = append(neighbours, Neighbour{Id: v[i].Id, Key: v[i].Key, Index: i})
+		// 		}
+		// 	} else {
+		// 		for i := length - 1; i >= 0; i-- {
+		// 			neighbours = append(neighbours, Neighbour{Id: v[i].Id, Key: v[i].Key, Index: i})
+		// 		}
+		// 	}
+	}
 	return neighbours
 }
 

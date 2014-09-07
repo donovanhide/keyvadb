@@ -3,10 +3,10 @@ package keyva
 import . "gopkg.in/check.v1"
 
 func (s *KeyVaSuite) TestTree(c *C) {
-	tree, err := NewTree(s.Keys, s.Values, &MatchingBalancer{})
+	tree, err := NewTree(s.Keys, s.Values, &RandomBalancer{})
 	c.Assert(err, IsNil)
-	n := 10000
-	rounds := 1
+	n := 100
+	rounds := 100
 	gen := NewRandomValueGenerator(100, 500, s.R)
 	for i := 0; i < rounds; i++ {
 		values, err := gen.Take(n)
