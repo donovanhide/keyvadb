@@ -45,6 +45,10 @@ func (t *Tree) add(n *Node, v ValueSlice) error {
 		n.Keys[neighbour.Index] = neighbour.Key
 		n.Values[neighbour.Index] = neighbour.Id
 	}
+	if !n.SanityCheck() {
+		fmt.Println(n)
+		panic("not sane")
+	}
 	childrenRanges := n.Ranges()
 	for i := 0; i < ChildCount; i++ {
 		childStart, childEnd := childrenRanges[i], childrenRanges[i+1]

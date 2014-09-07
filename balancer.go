@@ -45,7 +45,7 @@ func (b *MatchingBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
 		}
 		debugPrintln("--------")
 		debugPrintln(available)
-		neighbours.Sort()
+		neighbours.SortByDistance()
 		for _, neighbour := range neighbours {
 			_, keyUsed := usedKeys[neighbour.Key]
 			_, slotAvailable := availableSlots[neighbour.Index]
@@ -60,6 +60,7 @@ func (b *MatchingBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
 			}
 		}
 	}
+	filtered.SortByIndex()
 	debugPrintln(filtered)
 	return filtered
 }

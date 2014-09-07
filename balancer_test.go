@@ -35,6 +35,6 @@ func (s *KeyVaSuite) TestBalancers(c *C) {
 			End:   MustHash("0300000000000000000000000000000000000000000000000000000000000000"),
 		}
 		neighbours := balancer.Balance(node, neighbourValues)
-		neighbours.Sort()
+		c.Assert(neighbours.SanityCheck(), Equals, true)
 	}
 }
