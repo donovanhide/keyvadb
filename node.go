@@ -21,12 +21,22 @@ type Node struct {
 	Children [ChildCount]uint64
 }
 
+func (n *Node) NonEmptyKeys() HashSlice {
+	var keys HashSlice
+	for _, key := range n.Keys {
+		if !key.Equals(EmptyItem) {
+			keys = append(keys, key)
+		}
+	}
+	return keys
+}
+
 func (n *Node) Ranges() HashSlice {
 	return append(append(HashSlice{n.Start}, n.Keys[:]...), n.End)
 }
 
-func (n *Node) SanityCheck() bool {
-	return n.Ranges().IsSorted()
+func (n *Node) NonEmptyRanges() HashSlice {
+	return append(append(HashSlice{n.Start}, n.NonEmptyKeys()...), n.End)
 }
 
 func (n *Node) ChildCount() int {
@@ -40,13 +50,11 @@ func (n *Node) ChildCount() int {
 }
 
 func (n *Node) Occupancy() int {
-	count := 0
-	for _, key := range n.Keys {
-		if key.Compare(EmptyItem) > 0 {
-			count++
-		}
-	}
-	return count
+	return len(n.NonEmptyKeys())
+}
+
+func (n *Node) SanityCheck() bool {
+	return n.NonEmptyRanges().IsSorted()
 }
 
 func (n *Node) Items() string {
