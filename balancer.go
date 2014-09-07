@@ -21,11 +21,8 @@ func (b *RandomBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
 		}
 		selection := r.Perm(len(sub))[:length]
 		sort.Ints(selection)
-		// fmt.Println(empty)
-		// fmt.Println(selection)
 		j := 0
 		for i := empty.StartIndex; j < length && i < empty.EndIndex; i++ {
-			// fmt.Println(sub[selection[j]].Key)
 			neighbours = append(neighbours, Neighbour{
 				Id:    sub[selection[j]].Id,
 				Key:   sub[selection[j]].Key,

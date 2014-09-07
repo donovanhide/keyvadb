@@ -5,9 +5,10 @@ import . "gopkg.in/check.v1"
 func (s *KeyVaSuite) TestTree(c *C) {
 	tree, err := NewTree(s.Keys, s.Values, &RandomBalancer{})
 	c.Assert(err, IsNil)
-	n := 100
-	rounds := 100
-	gen := NewRandomValueGenerator(100, 500, s.R)
+	n := 100000
+	rounds := 10
+	gen := NewRandomValueGenerator(10, 50, s.R)
+	sum := 0
 	for i := 0; i < rounds; i++ {
 		values, err := gen.Take(n)
 		c.Assert(err, IsNil)
@@ -17,5 +18,7 @@ func (s *KeyVaSuite) TestTree(c *C) {
 		c.Assert(err, IsNil)
 		c.Log(levels)
 		// c.Assert(tree.Dump(os.Stdout), IsNil)
+		sum += n
+		c.Assert(levels.Total().Entries, Equals, sum)
 	}
 }

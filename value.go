@@ -32,6 +32,9 @@ func (v ValueSlice) GetRange(start, end Hash) ValueSlice {
 	first := sort.Search(len(v), func(i int) bool {
 		return v[i].Key.Compare(start) >= 0
 	})
+	last := sort.Search(len(v)-first, func(i int) bool {
+		return v[i+first].Key.Compare(end) >= 0
+	}) + first
 	switch {
 	case first == len(v):
 		return nil
@@ -39,15 +42,6 @@ func (v ValueSlice) GetRange(start, end Hash) ValueSlice {
 		return nil
 	case v[first].Key.Equals(start):
 		first++
-	}
-	last := sort.Search(len(v)-first, func(i int) bool {
-		return v[i+first].Key.Compare(end) >= 0
-	}) + first
-	switch {
-	case last == len(v):
-		last--
-	case v[last].Key.Equals(end):
-		last--
 	}
 	if last < 0 || first > last {
 		return nil
