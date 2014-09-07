@@ -23,11 +23,18 @@ var neighbourTargets = []Target{
 	{7, MustHash("02C9A73DC00EF821DD7C13C9DD9F6A120147FF5FEFE4B45D1EC8601001C57631")},
 }
 
-func (s *KeyVaSuite) TestBalancer(c *C) {
-	node := &Node{
-		Start: MustHash("0000000000000000000000000000000000000000000000000000000000000001"),
-		End:   MustHash("0300000000000000000000000000000000000000000000000000000000000000"),
+var balancers = []Balancer{
+	&NaiveBalancer{},
+	&MatchingBalancer{},
+}
+
+func (s *KeyVaSuite) TestBalancers(c *C) {
+	for _, balancer := range balancers {
+		node := &Node{
+			Start: MustHash("0000000000000000000000000000000000000000000000000000000000000001"),
+			End:   MustHash("0300000000000000000000000000000000000000000000000000000000000000"),
+		}
+		neighbours := balancer.Balance(node, neighbourValues)
+		neighbours.Sort()
 	}
-	neighbours := balancer(node, neighbourValues)
-	neighbours.Sort()
 }

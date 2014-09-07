@@ -3,7 +3,7 @@ package keyva
 import . "gopkg.in/check.v1"
 
 func (s *KeyVaSuite) TestTree(c *C) {
-	tree, err := NewTree(s.Keys, s.Values, balancer)
+	tree, err := NewTree(s.Keys, s.Values, &MatchingBalancer{})
 	c.Assert(err, IsNil)
 	n := 1000
 	rounds := 1

@@ -17,3 +17,7 @@ type ValueStore interface {
 	Get(id uint64) (*Value, error)
 	Each(func(int, *Value) error) error
 }
+
+type Balancer interface {
+	Balance(n *Node, v ValueSlice) NeighbourSlice
+}

@@ -2,7 +2,15 @@ package keyva
 
 import "sort"
 
-var balancer = func(n *Node, v ValueSlice) NeighbourSlice {
+type NaiveBalancer struct{}
+type MatchingBalancer struct{}
+
+func (b *NaiveBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
+	var neighbours NeighbourSlice
+	return neighbours
+}
+
+func (b *MatchingBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
 	targets := NewTargetSlice(n.Start, n.End, n.Keys[:])
 	debugPrintln(targets)
 	var neighbours NeighbourSlice

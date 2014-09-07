@@ -10,10 +10,10 @@ type Tree struct {
 	root     *Node
 	keys     KeyStore
 	values   ValueStore
-	balancer BalancerFunc
+	balancer Balancer
 }
 
-func NewTree(keys KeyStore, values ValueStore, f BalancerFunc) (*Tree, error) {
+func NewTree(keys KeyStore, values ValueStore, balancer Balancer) (*Tree, error) {
 	root, err := keys.Get(0)
 	switch {
 	case err == ErrNotFound:
@@ -31,18 +31,16 @@ func NewTree(keys KeyStore, values ValueStore, f BalancerFunc) (*Tree, error) {
 		root:     root,
 		keys:     keys,
 		values:   values,
-		balancer: f,
+		balancer: balancer,
 	}, nil
 }
-
-type BalancerFunc func(n *Node, v ValueSlice) NeighbourSlice
 
 func (t *Tree) add(n *Node, v ValueSlice) error {
 	if len(v) == 0 {
 		return nil
 	}
 	debugPrintln(n)
-	neighbours := t.balancer(n, v)
+	neighbours := t.balancer.Balance(n, v)
 	for _, neighbour := range neighbours {
 		n.Keys[neighbour.Index] = neighbour.Key
 		n.Values[neighbour.Index] = neighbour.Id
@@ -119,10 +117,11 @@ func (t *Tree) Dump(w io.Writer) error {
 
 func (t *Tree) Levels() (LevelSlice, error) {
 	var levels LevelSlice
-	if err := t.Each(func(level int, n *Node) error {
+	err := t.Each(func(level int, n *Node) error {
 		levels.Add(n, level)
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
 	return levels, nil
