@@ -112,5 +112,15 @@ func (t *Tree) Dump(w io.Writer) error {
 		}
 		return nil
 	})
+}
 
+func (t *Tree) Levels() (LevelSlice, error) {
+	var levels LevelSlice
+	if err := t.Each(func(level int, n *Node) error {
+		levels.Add(n, level)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return levels, nil
 }
