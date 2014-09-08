@@ -35,22 +35,22 @@ func NewTree(keys KeyStore, values ValueStore, balancer Balancer) (*Tree, error)
 	}, nil
 }
 
-func (t *Tree) add(n *Node, v ValueSlice) error {
+func (t *Tree) add(n *Node, v ValueSlice) (insertions int, err error) {
 	if len(v) == 0 {
 		panic("no values to add")
 	}
 	debugPrintln(n)
-	insertions := t.balancer.Balance(n, v)
+	insertions = t.balancer.Balance(n, v)
 	if !n.SanityCheck() || insertions > len(v) {
 		panic(fmt.Sprintf("not sane:\n%s", n))
 	}
 	if insertions == len(v) {
-		return nil
+		return
 	}
 	childrenRanges := n.Ranges()
 	for i := 0; i < ChildCount; i++ {
 		childStart, childEnd := childrenRanges[i], childrenRanges[i+1]
-		if childStart == EmptyItem || childEnd == EmptyItem {
+		if childStart.Empty() || childEnd.Empty() {
 			continue
 		}
 		candidates := v.GetRange(childStart, childEnd)
@@ -58,26 +58,30 @@ func (t *Tree) add(n *Node, v ValueSlice) error {
 			continue
 		}
 		var child *Node
-		var err error
 		if id := n.Children[i]; id == EmptyChild {
-			child, err = t.keys.New(childStart, childEnd)
+			if child, err = t.keys.New(childStart, childEnd); err != nil {
+				return
+			}
 			n.Children[i] = child.Id
 		} else {
-			child, err = t.keys.Get(id)
+			if child, err = t.keys.Get(id); err != nil {
+				return
+			}
 		}
+		var childInsertions int
+		childInsertions, err = t.add(child, candidates)
+		insertions += childInsertions
 		if err != nil {
-			return err
-		}
-		if err := t.add(child, candidates); err != nil {
-			return err
+			return
 		}
 	}
-	return nil
+	return
 }
 
-func (t *Tree) Add(values ValueSlice) error {
+// Returns number of values inserted and an error if encountered
+func (t *Tree) Add(values ValueSlice) (int, error) {
 	if !values.IsSorted() {
-		return fmt.Errorf("unsorted values provided")
+		return 0, fmt.Errorf("unsorted values provided")
 	}
 	return t.add(t.root, values)
 }
