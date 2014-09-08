@@ -10,28 +10,65 @@ type RandomBalancer struct{}
 type NaiveBalancer struct{}
 type MatchingBalancer struct{}
 
+type EmptyRange struct {
+	Start      Hash
+	End        Hash
+	StartIndex int
+	EndIndex   int
+}
+
+func (e EmptyRange) String() string {
+	return fmt.Sprintf("%d:%d:%s:%s", e.StartIndex, e.EndIndex, e.Start, e.End)
+}
+
+func (e EmptyRange) Len() int {
+	return e.EndIndex - e.StartIndex
+}
+
+func EmptyRanges(n *Node) []EmptyRange {
+	var empties []EmptyRange
+	r := n.Ranges()
+	for i := 0; i < ItemCount; i++ {
+		if n.Keys[i].Empty() {
+			empty := EmptyRange{
+				Start:      r[i],
+				StartIndex: i,
+			}
+			for ; i < ItemCount && n.Keys[i].Empty(); i++ {
+			}
+			empty.End = r[i+1]
+			empty.EndIndex = i
+			empties = append(empties, empty)
+		}
+	}
+	return empties
+}
+
 func (b *RandomBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
 	var neighbours NeighbourSlice
 	r := rand.New(rand.NewSource(int64(n.Id)))
-	for _, empty := range n.EmptyRanges() {
+	for _, empty := range EmptyRanges(n) {
 		sub := v.GetRange(empty.Start, empty.End)
-		length := empty.EndIndex - empty.StartIndex
-		if length > len(sub) {
-			length = len(sub)
-		}
-		selection := r.Perm(len(sub))[:length]
-		sort.Ints(selection)
-		j := 0
-		for i := empty.StartIndex; j < length && i < empty.EndIndex; i++ {
-			neighbours = append(neighbours, Neighbour{
-				Id:    sub[selection[j]].Id,
-				Key:   sub[selection[j]].Key,
-				Index: i,
-			})
-			j++
+		switch {
+		case len(sub) == 0:
+			//Nothing to do
+			continue
+		case empty.Len() <= len(sub):
+			//Pick random
+			picks := r.Perm(len(sub))[:empty.Len()]
+			sort.Ints(picks)
+			for i, pick := range picks {
+				neighbours = append(neighbours, *NewNeighbourAt(&sub[pick], empty.StartIndex+i))
+			}
+		default:
+			//Place random
+			locations := r.Perm(empty.Len())[:len(sub)]
+			sort.Ints(locations)
+			for i, location := range locations {
+				neighbours = append(neighbours, *NewNeighbourAt(&sub[i], empty.StartIndex+location))
+			}
 		}
 	}
-	neighbours.SortByIndex()
 	return neighbours
 }
 

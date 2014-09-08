@@ -14,6 +14,14 @@ func NewNeighbour(v Value, t Target) *Neighbour {
 	}
 }
 
+func NewNeighbourAt(v *Value, i int) *Neighbour {
+	return &Neighbour{
+		Id:    v.Id,
+		Key:   v.Key,
+		Index: i,
+	}
+}
+
 type Neighbour struct {
 	Id       uint64
 	Key      Hash

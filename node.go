@@ -7,13 +7,6 @@ import (
 
 type nodeFunc func(int, *Node) error
 
-type EmptyRange struct {
-	Start      Hash
-	End        Hash
-	StartIndex int
-	EndIndex   int
-}
-
 type Item struct {
 	Key    Hash
 	Offset uint64
@@ -44,25 +37,6 @@ func (n *Node) Ranges() HashSlice {
 
 func (n *Node) NonEmptyRanges() HashSlice {
 	return append(append(HashSlice{n.Start}, n.NonEmptyKeys()...), n.End)
-}
-
-func (n *Node) EmptyRanges() []EmptyRange {
-	var empties []EmptyRange
-	r := n.Ranges()
-	for i := 0; i < ItemCount; i++ {
-		if n.Keys[i].Empty() {
-			empty := EmptyRange{
-				Start:      r[i],
-				StartIndex: i,
-			}
-			for ; i < ItemCount && n.Keys[i].Empty(); i++ {
-			}
-			empty.End = r[i+1]
-			empty.EndIndex = i
-			empties = append(empties, empty)
-		}
-	}
-	return empties
 }
 
 func (n *Node) ChildCount() int {

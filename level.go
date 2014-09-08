@@ -13,7 +13,7 @@ type Level struct {
 }
 
 func (l Level) String() string {
-	return fmt.Sprintf("Nodes: %8d Entries: %8d WellFormed: %8d", l.Nodes, l.Entries, l.WellFormed)
+	return fmt.Sprintf("Nodes: %8d\tEntries: %8d\tWellFormed: %8d", l.Nodes, l.Entries, l.WellFormed)
 }
 
 func (l *Level) Add(b Level) {
@@ -42,14 +42,18 @@ func (l LevelSlice) Total() Level {
 
 func (l LevelSlice) String() string {
 	total := l.Total()
+	var sumExpected float64
 	var s []string
 	for i, level := range l {
 		expected := math.Pow(float64(ChildCount), float64(i))
+		sumExpected += expected
 		occupied := float64(level.Nodes) / expected * 100
 		share := float64(level.Nodes) / float64(total.Nodes) * 100
-		s = append(s, fmt.Sprintf("Level: %3d %s Occupied: %6.2f%% Share: %6.2f%%", i, level, occupied, share))
+		s = append(s, fmt.Sprintf("Level: %3d\t%s\tOccupied: %6.2f%%\tShare: %6.2f%%", i, level, occupied, share))
 	}
-	s = append(s, "Total:     "+total.String())
+	averageEntries := float64(total.Entries) / float64(total.Nodes)
+	efficency := averageEntries / float64(ItemCount) * 100
+	s = append(s, fmt.Sprintf("Total:\t\t%s\tEntries/Node: %6.2f\t Efficiency: %6.2f%%", total, averageEntries, efficency))
 	return strings.Join(s, "\n")
 }
 
