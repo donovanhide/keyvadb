@@ -8,7 +8,7 @@ import (
 
 type RandomBalancer struct{}
 type BufferBalancer struct{}
-type MatchingBalancer struct{}
+type BufferWithFitting struct{}
 
 type EmptyRange struct {
 	Start      Hash
@@ -101,57 +101,30 @@ func (b *BufferBalancer) Balance(n *Node, v ValueSlice) (insertions int) {
 	return
 }
 
-func (b *MatchingBalancer) Balance(n *Node, v ValueSlice) (insertions int) {
-	targets := NewTargetSlice(n.Start, n.End, n.Keys[:])
-	debugPrintln(targets)
-	var neighbours NeighbourSlice
-	var filtered NeighbourSlice
-	available := make(ValueSlice, len(v))
-	copy(available, v)
-	availableSlots := make(map[int]Target)
-	for _, target := range targets {
-		availableSlots[target.Index] = target
-	}
-	usedKeys := make(map[Hash]struct{})
-	for len(availableSlots) > 0 && len(available) > 0 {
-		debugPrintln("Matched Targets")
-		for _, target := range availableSlots {
-			i := sort.Search(len(available), func(j int) bool {
-				return available[j].Key.Compare(target.Key) >= 0
-			})
-			debugPrintf("%06d:%s\n", i, target)
-			if i == len(available) {
-				// if len(available) == 1 {
-				neighbours = append(neighbours, *NewNeighbour(available[i-1], target))
-				// }
-				continue
-			}
-			neighbours = append(neighbours, *NewNeighbour(available[i], target))
-			if i > 0 {
-				neighbours = append(neighbours, *NewNeighbour(available[i-1], target))
-			}
-			if i < len(available)-1 {
-				neighbours = append(neighbours, *NewNeighbour(available[i+1], target))
-			}
+func (b *BufferWithFitting) Balance(n *Node, v ValueSlice) (insertions int) {
+	occupied := n.Occupancy()
+	switch {
+	case occupied+len(v) <= ItemCount:
+		// No children yet
+		// Add items at the start and sort node
+		for i, v := range v {
+			n.UpdateEntry(i, v.Key, v.Id)
 		}
-		debugPrintln("--------")
-		debugPrintln(available)
-		neighbours.SortByDistance()
-		for _, neighbour := range neighbours {
-			_, keyUsed := usedKeys[neighbour.Key]
-			_, slotAvailable := availableSlots[neighbour.Index]
-			if !keyUsed && slotAvailable {
-				filtered = append(filtered, neighbour)
-				usedKeys[neighbour.Key] = struct{}{}
-				delete(availableSlots, neighbour.Index)
-				i := sort.Search(len(available), func(j int) bool {
-					return available[j].Key.Compare(neighbour.Key) >= 0
-				})
-				available = append(available[:i], available[i+1:]...)
-			}
+		sort.Sort(&nodeByKey{n})
+		insertions = len(v)
+	case occupied < ItemCount:
+		// Choose random from v and n
+		r := rand.New(rand.NewSource(int64(n.Id)))
+		picks := r.Perm(len(v))[:ItemCount-occupied]
+		sort.Ints(picks)
+		for i, pick := range picks {
+			n.UpdateEntry(i, v[pick].Key, v[pick].Id)
+			insertions++
 		}
+		sort.Sort(&nodeByKey{n})
+	default:
+		// Nothing to do
+		// Node is full
 	}
-	filtered.SortByIndex()
-	debugPrintln(filtered)
 	return
 }

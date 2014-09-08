@@ -2,6 +2,7 @@ package keyva
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 )
 
@@ -20,7 +21,22 @@ type nodeByKey struct {
 	*Node
 }
 
+type nodeByDistance struct {
+	*Node
+	Stride     *big.Int
+	HalfStride *big.Int
+}
+
 func (n *nodeByKey) Less(i, j int) bool { return n.Keys[i].Compare(n.Keys[j]) < 0 }
+
+func (n *nodeByDistance) Less(i, j int) bool {
+	leftIndex, leftDistance := n.Keys[i].NearestStride(n.Stride, n.HalfStride)
+	rightIndex, rightDistance := n.Keys[j].NearestStride(n.Stride, n.HalfStride)
+	if leftIndex == rightIndex {
+		return leftDistance.Compare(rightDistance) < 0
+	}
+	return leftIndex < rightIndex
+}
 
 func (n *Node) Len() int { return ItemCount }
 func (n *Node) Swap(i, j int) {

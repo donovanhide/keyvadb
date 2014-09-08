@@ -13,9 +13,9 @@ var neighbourValues = ValueSlice{
 }
 
 var balancers = map[string]Balancer{
-	"Random": &RandomBalancer{},
-	"Buffer": &BufferBalancer{},
-	// "Matching": &MatchingBalancer{},
+	// "Random": &RandomBalancer{},
+	// "Buffer": &BufferBalancer{},
+	"BufferWithFitting": &BufferWithFitting{},
 }
 
 func (s *KeyVaSuite) TestBalancers(c *C) {

@@ -85,6 +85,18 @@ func (a Hash) Divide(n int64) Hash {
 	return newHash(quot.Div(quot, big.NewInt(n)))
 }
 
+// Returns multiple of stride and distance
+func (a Hash) NearestStride(stride, halfStride *big.Int) (int, Hash) {
+	quot := a.Big()
+	rem := big.NewInt(0)
+	quot.QuoRem(quot, stride, rem)
+	if rem.Cmp(halfStride) <= 0 {
+		return int(quot.Int64()), newHash(rem)
+	}
+	return int(quot.Int64()) + 1, newHash(stride.Sub(stride, rem))
+
+}
+
 func (a Hash) Stride(b Hash, n int64) Hash {
 	return a.Distance(b).Divide(n)
 }
