@@ -12,15 +12,11 @@ import (
 func Test(t *testing.T) { TestingT(t) }
 
 type KeyVaSuite struct {
-	R      io.Reader
-	Keys   KeyStore
-	Values ValueStore
+	R io.Reader
 }
 
 var _ = Suite(&KeyVaSuite{})
 
 func (s *KeyVaSuite) SetUpTest(c *C) {
 	s.R = randbo.NewFrom(rand.NewSource(0))
-	s.Keys = NewMemoryKeyStore()
-	s.Values = NewMemoryValueStore()
 }

@@ -7,7 +7,7 @@ import (
 )
 
 type RandomBalancer struct{}
-type NaiveBalancer struct{}
+type BufferBalancer struct{}
 type MatchingBalancer struct{}
 
 type EmptyRange struct {
@@ -73,22 +73,30 @@ func (b *RandomBalancer) Balance(n *Node, v ValueSlice) (insertions int) {
 	return
 }
 
-func (b *NaiveBalancer) Balance(n *Node, v ValueSlice) (insertions int) {
-	median := v[len(v)/2]
-	occupancy := n.Occupancy()
-	length := ItemCount - n.Occupancy()
-	swing := median.Key.Distance(n.Start).Compare(median.Key.Distance(n.End))
-	fmt.Println(median.Key, length, swing)
-	if occupancy == 0 {
-		// 	if swing <= 0 {
-		// 		for i := 0; i < length; i++ {
-		// 			neighbours = append(neighbours, Neighbour{Id: v[i].Id, Key: v[i].Key, Index: i})
-		// 		}
-		// 	} else {
-		// 		for i := length - 1; i >= 0; i-- {
-		// 			neighbours = append(neighbours, Neighbour{Id: v[i].Id, Key: v[i].Key, Index: i})
-		// 		}
-		// 	}
+func (b *BufferBalancer) Balance(n *Node, v ValueSlice) (insertions int) {
+	occupied := n.Occupancy()
+	switch {
+	case occupied+len(v) <= ItemCount:
+		// No children yet
+		// Add items at the start and sort node
+		for i, v := range v {
+			n.UpdateEntry(i, v.Key, v.Id)
+		}
+		sort.Sort(&nodeByKey{n})
+		insertions = len(v)
+	case occupied < ItemCount:
+		// Merge random
+		r := rand.New(rand.NewSource(int64(n.Id)))
+		picks := r.Perm(len(v))[:ItemCount-occupied]
+		sort.Ints(picks)
+		for i, pick := range picks {
+			n.UpdateEntry(i, v[pick].Key, v[pick].Id)
+			insertions++
+		}
+		sort.Sort(&nodeByKey{n})
+	default:
+		// Nothing to do
+		// Node is full
 	}
 	return
 }

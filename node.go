@@ -7,11 +7,6 @@ import (
 
 type nodeFunc func(int, *Node) error
 
-type Item struct {
-	Key    Hash
-	Offset uint64
-}
-
 type Node struct {
 	Id       uint64
 	Start    Hash
@@ -21,19 +16,36 @@ type Node struct {
 	Children [ChildCount]uint64
 }
 
-func (n *Node) NonEmptyKeys() HashSlice {
-	var keys HashSlice
-	for _, key := range n.Keys {
-		if !key.Equals(EmptyItem) {
-			keys = append(keys, key)
-		}
+type nodeByKey struct {
+	*Node
+}
+
+func (n *nodeByKey) Less(i, j int) bool { return n.Keys[i].Compare(n.Keys[j]) < 0 }
+
+func (n *Node) Len() int { return ItemCount }
+func (n *Node) Swap(i, j int) {
+	if n.Children[i] != EmptyChild ||
+		n.Children[j] != EmptyChild ||
+		n.Children[i+1] != EmptyChild ||
+		n.Children[j+1] != EmptyChild {
+		panic(fmt.Sprintf("Cannot swap:\n%s", n))
 	}
-	return keys
+	n.Keys[i], n.Keys[j], n.Values[i], n.Values[j] = n.Keys[j], n.Keys[i], n.Values[j], n.Values[i]
 }
 
 func (n *Node) UpdateEntry(i int, key Hash, id uint64) {
 	n.Keys[i] = key
 	n.Values[i] = id
+}
+
+func (n *Node) NonEmptyKeys() HashSlice {
+	var keys HashSlice
+	for _, key := range n.Keys {
+		if !key.Empty() {
+			keys = append(keys, key)
+		}
+	}
+	return keys
 }
 
 func (n *Node) Ranges() HashSlice {
@@ -55,7 +67,13 @@ func (n *Node) ChildCount() int {
 }
 
 func (n *Node) Occupancy() int {
-	return len(n.NonEmptyKeys())
+	count := 0
+	for _, key := range n.Keys {
+		if !key.Empty() {
+			count++
+		}
+	}
+	return count
 }
 
 func (n *Node) SanityCheck() bool {
