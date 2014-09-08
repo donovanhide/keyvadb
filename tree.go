@@ -37,17 +37,15 @@ func NewTree(keys KeyStore, values ValueStore, balancer Balancer) (*Tree, error)
 
 func (t *Tree) add(n *Node, v ValueSlice) error {
 	if len(v) == 0 {
-		return nil
+		panic("no values to add")
 	}
 	debugPrintln(n)
-	neighbours := t.balancer.Balance(n, v)
-	for _, neighbour := range neighbours {
-		n.Keys[neighbour.Index] = neighbour.Key
-		n.Values[neighbour.Index] = neighbour.Id
+	insertions := t.balancer.Balance(n, v)
+	if !n.SanityCheck() || insertions > len(v) {
+		panic(fmt.Sprintf("not sane:\n%s", n))
 	}
-	if !n.SanityCheck() {
-		fmt.Println(n)
-		panic("not sane")
+	if insertions == len(v) {
+		return nil
 	}
 	childrenRanges := n.Ranges()
 	for i := 0; i < ChildCount; i++ {

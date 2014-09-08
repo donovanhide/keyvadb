@@ -44,8 +44,7 @@ func EmptyRanges(n *Node) []EmptyRange {
 	return empties
 }
 
-func (b *RandomBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
-	var neighbours NeighbourSlice
+func (b *RandomBalancer) Balance(n *Node, v ValueSlice) (insertions int) {
 	r := rand.New(rand.NewSource(int64(n.Id)))
 	for _, empty := range EmptyRanges(n) {
 		sub := v.GetRange(empty.Start, empty.End)
@@ -58,27 +57,28 @@ func (b *RandomBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
 			picks := r.Perm(len(sub))[:empty.Len()]
 			sort.Ints(picks)
 			for i, pick := range picks {
-				neighbours = append(neighbours, *NewNeighbourAt(&sub[pick], empty.StartIndex+i))
+				n.UpdateEntry(empty.StartIndex+i, sub[pick].Key, sub[pick].Id)
+				insertions++
 			}
 		default:
 			//Place random
 			locations := r.Perm(empty.Len())[:len(sub)]
 			sort.Ints(locations)
 			for i, location := range locations {
-				neighbours = append(neighbours, *NewNeighbourAt(&sub[i], empty.StartIndex+location))
+				n.UpdateEntry(empty.StartIndex+location, sub[i].Key, sub[i].Id)
+				insertions++
 			}
 		}
 	}
-	return neighbours
+	return
 }
 
-func (b *NaiveBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
+func (b *NaiveBalancer) Balance(n *Node, v ValueSlice) (insertions int) {
 	median := v[len(v)/2]
 	occupancy := n.Occupancy()
 	length := ItemCount - n.Occupancy()
 	swing := median.Key.Distance(n.Start).Compare(median.Key.Distance(n.End))
 	fmt.Println(median.Key, length, swing)
-	neighbours := make(NeighbourSlice, length)
 	if occupancy == 0 {
 		// 	if swing <= 0 {
 		// 		for i := 0; i < length; i++ {
@@ -90,10 +90,10 @@ func (b *NaiveBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
 		// 		}
 		// 	}
 	}
-	return neighbours
+	return
 }
 
-func (b *MatchingBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
+func (b *MatchingBalancer) Balance(n *Node, v ValueSlice) (insertions int) {
 	targets := NewTargetSlice(n.Start, n.End, n.Keys[:])
 	debugPrintln(targets)
 	var neighbours NeighbourSlice
@@ -145,5 +145,5 @@ func (b *MatchingBalancer) Balance(n *Node, v ValueSlice) NeighbourSlice {
 	}
 	filtered.SortByIndex()
 	debugPrintln(filtered)
-	return filtered
+	return
 }

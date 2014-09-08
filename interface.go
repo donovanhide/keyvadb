@@ -19,5 +19,5 @@ type ValueStore interface {
 }
 
 type Balancer interface {
-	Balance(n *Node, v ValueSlice) NeighbourSlice
+	Balance(n *Node, v ValueSlice) int
 }

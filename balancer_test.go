@@ -24,7 +24,8 @@ func (s *KeyVaSuite) TestBalancers(c *C) {
 			Start: MustHash("0000000000000000000000000000000000000000000000000000000000000001"),
 			End:   MustHash("0300000000000000000000000000000000000000000000000000000000000000"),
 		}
-		neighbours := balancer.Balance(node, neighbourValues)
-		c.Check(neighbours.SanityCheck(), Equals, true, Commentf("%s is not sane", name))
+		insertions := balancer.Balance(node, neighbourValues)
+		c.Check(insertions, Equals, len(neighbourValues), Commentf("%s wrong number of insertions", name))
+		c.Check(node.SanityCheck(), Equals, true, Commentf("%s is not sane", name))
 	}
 }

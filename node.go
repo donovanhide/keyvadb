@@ -31,6 +31,11 @@ func (n *Node) NonEmptyKeys() HashSlice {
 	return keys
 }
 
+func (n *Node) UpdateEntry(i int, key Hash, id uint64) {
+	n.Keys[i] = key
+	n.Values[i] = id
+}
+
 func (n *Node) Ranges() HashSlice {
 	return append(append(HashSlice{n.Start}, n.Keys[:]...), n.End)
 }
