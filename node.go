@@ -2,7 +2,6 @@ package keyva
 
 import (
 	"fmt"
-	"math/big"
 	"strings"
 )
 
@@ -17,39 +16,10 @@ type Node struct {
 	Children [ChildCount]uint64
 }
 
-type nodeByKey struct {
-	*Node
-}
-
-type nodeByDistance struct {
-	*Node
-	Stride     *big.Int
-	HalfStride *big.Int
-}
-
-func (n *nodeByKey) Less(i, j int) bool { return n.Keys[i].Compare(n.Keys[j]) < 0 }
-
-func (n *nodeByDistance) Less(i, j int) bool {
-	leftIndex, leftDistance := n.Keys[i].NearestStride(n.Stride, n.HalfStride)
-	rightIndex, rightDistance := n.Keys[j].NearestStride(n.Stride, n.HalfStride)
-	if leftIndex == rightIndex {
-		return leftDistance.Compare(rightDistance) < 0
-	}
-	return leftIndex < rightIndex
-}
-
-func (n *Node) Len() int { return ItemCount }
-func (n *Node) Swap(i, j int) {
-	if n.Children[i] != EmptyChild ||
-		n.Children[j] != EmptyChild ||
-		n.Children[i+1] != EmptyChild ||
-		n.Children[j+1] != EmptyChild {
-		panic(fmt.Sprintf("Cannot swap:\n%s", n))
-	}
-	n.Keys[i], n.Keys[j], n.Values[i], n.Values[j] = n.Keys[j], n.Keys[i], n.Values[j], n.Values[i]
-}
-
 func (n *Node) UpdateEntry(i int, key Hash, id uint64) {
+	if n.Children[i] != EmptyChild || n.Children[i+1] != EmptyChild {
+		panic("cannot update entry with child")
+	}
 	n.Keys[i] = key
 	n.Values[i] = id
 }
@@ -96,6 +66,14 @@ func (n *Node) SanityCheck() bool {
 	return n.NonEmptyRanges().IsSorted()
 }
 
+func (n *Node) Stride() Hash {
+	return n.Start.Stride(n.End, ItemCount+1)
+}
+
+func (n *Node) Distance() Hash {
+	return n.Start.Distance(n.End)
+}
+
 func (n *Node) Items() string {
 	var items []string
 	for i := range n.Keys {
@@ -105,8 +83,39 @@ func (n *Node) Items() string {
 }
 
 func (n *Node) String() string {
-	distance := n.Start.Distance(n.End)
-	stride := n.Start.Stride(n.End, ItemCount+1)
 	format := "Id:\t\t%d\nWell Formed:\t%t\nOccupancy:\t%d\nChildren:\t%d\nStart:\t\t%s\nEnd:\t\t%s\nDistance:\t%s\nStride:\t\t%s\n--------\n%s\n--------"
-	return fmt.Sprintf(format, n.Id, n.SanityCheck(), n.Occupancy(), n.ChildCount(), n.Start, n.End, distance, stride, n.Items())
+	return fmt.Sprintf(format, n.Id, n.SanityCheck(), n.Occupancy(), n.ChildCount(), n.Start, n.End, n.Distance(), n.Stride(), n.Items())
 }
+
+// sorting helpers
+
+func (n *Node) Len() int { return ItemCount }
+func (n *Node) Swap(i, j int) {
+	if n.Children[i] != EmptyChild ||
+		n.Children[j] != EmptyChild ||
+		n.Children[i+1] != EmptyChild ||
+		n.Children[j+1] != EmptyChild {
+		panic(fmt.Sprintf("Cannot swap:\n%s", n))
+	}
+	n.Keys[i], n.Keys[j], n.Values[i], n.Values[j] = n.Keys[j], n.Keys[i], n.Values[j], n.Values[i]
+}
+
+type nodeByKey struct {
+	*Node
+}
+
+func (n nodeByKey) Less(i, j int) bool { return n.Keys[i].Compare(n.Keys[j]) < 0 }
+
+// type nodeByDistance struct {
+// 	*Node
+// 	HalfStride *big.Int
+// }
+
+// func (n nodeByDistance) Less(i, j int) bool {
+// 	leftIndex, leftDistance := n.Keys[i].NearestStride(n.HalfStride)
+// 	rightIndex, rightDistance := n.Keys[j].NearestStride(n.HalfStride)
+// 	if leftIndex == rightIndex {
+// 		return leftDistance.Compare(rightDistance) < 0
+// 	}
+// 	return leftIndex < rightIndex
+// }

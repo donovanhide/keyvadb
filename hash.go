@@ -34,19 +34,17 @@ func MustHash(s string) Hash {
 	}
 }
 
+// Clamps and ensures value is absolute
 func newHash(n *big.Int) Hash {
+	var h Hash
 	n.Abs(n)
-	switch {
-	case n.Cmp(maxBig) >= 0:
-		return LastHash
-	case n.Cmp(minBig) <= 0:
-		return FirstHash
-	default:
+	if n.Cmp(maxBig) >= 0 {
+		h = LastHash
+	} else {
 		b := n.Bytes()
-		var h Hash
 		copy(h[HashSize-len(b):], b)
-		return h
 	}
+	return h
 }
 
 func (h Hash) Empty() bool {
@@ -80,21 +78,32 @@ func (a Hash) Add(b Hash) Hash {
 	return newHash(sum.Add(sum, b.Big()))
 }
 
+func (a Hash) Sub(b Hash) Hash {
+	sum := a.Big()
+	return newHash(sum.Sub(sum, b.Big()))
+}
+
 func (a Hash) Divide(n int64) Hash {
 	quot := a.Big()
 	return newHash(quot.Div(quot, big.NewInt(n)))
 }
 
+func (a Hash) Multiply(n int64) Hash {
+	product := a.Big()
+	return newHash(product.Mul(product, big.NewInt(n)))
+}
+
 // Returns multiple of stride and distance
-func (a Hash) NearestStride(stride, halfStride *big.Int) (int, Hash) {
-	quot := a.Big()
+func (a Hash) NearestStride(start Hash, stride, halfStride *big.Int) (int, Hash) {
+	quot := a.Sub(start).Big()
 	rem := big.NewInt(0)
 	quot.QuoRem(quot, stride, rem)
-	if rem.Cmp(halfStride) <= 0 {
-		return int(quot.Int64()), newHash(rem)
+	i := quot.Int64()
+	if rem.Cmp(halfStride) > 0 {
+		i++
+		halfStride.Sub(rem, halfStride)
 	}
-	return int(quot.Int64()) + 1, newHash(stride.Sub(stride, rem))
-
+	return int(i), newHash(rem)
 }
 
 func (a Hash) Stride(b Hash, n int64) Hash {

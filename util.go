@@ -27,9 +27,9 @@ func dumpWithTitle(title string, data interface{}, indent int) string {
 	return strings.Join(s, "\n")
 }
 
-func debugPrintln(v interface{}) {
+func debugPrintln(v ...interface{}) {
 	if *debug {
-		fmt.Println(v)
+		fmt.Println(v...)
 	}
 }
 

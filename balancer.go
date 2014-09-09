@@ -112,16 +112,30 @@ func (b *BufferWithFitting) Balance(n *Node, v ValueSlice) (insertions int) {
 		}
 		sort.Sort(&nodeByKey{n})
 		insertions = len(v)
+		// fmt.Println(n)
 	case occupied < ItemCount:
-		// Choose random from v and n
-		r := rand.New(rand.NewSource(int64(n.Id)))
-		picks := r.Perm(len(v))[:ItemCount-occupied]
-		sort.Ints(picks)
-		for i, pick := range picks {
-			n.UpdateEntry(i, v[pick].Key, v[pick].Id)
-			insertions++
+		// Merge best fits from n.Items and v
+		// halfStride := n.Stride().Divide(2).Big()
+		// // sort.Sort(&nodeByDistance{
+		// // 	Node:       n,
+		// // 	HalfStride: halfStride,
+		// // })
+		// fmt.Println(n)
+		// fmt.Println(v)
+		dist := NewDistanceMap(n)
+		dist.Add(v)
+		fmt.Println(dist)
+		for i, value := range n.Keys {
+			candidate := dist.Get(i)
+			fmt.Println(i, candidate)
+			if value.Empty() && candidate != nil {
+				n.UpdateEntry(i, candidate.Key, candidate.Id)
+				insertions++
+			}
 		}
+		// fmt.Println(n)
 		sort.Sort(&nodeByKey{n})
+		sort.Sort(v)
 	default:
 		// Nothing to do
 		// Node is full
