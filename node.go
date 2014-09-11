@@ -2,6 +2,7 @@ package keyva
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -30,22 +31,26 @@ func (n *Node) UpdateEntry(i int, key Key) {
 	n.Keys[i] = key
 }
 
-func (n *Node) NonEmptyKeys() KeySlice {
-	var keys KeySlice
+func (n *Node) AddSyntheticKeys() {
+	stride := n.Stride()
+	cursor := n.Start.Add(stride)
+	for i := range n.Keys {
+		n.UpdateEntry(i, Key{
+			Key: cursor,
+			Id:  SyntheticChild,
+		})
+		cursor = cursor.Add(stride)
+	}
+}
+
+func (n *Node) Synthetics() int {
+	count := 0
 	for _, key := range n.Keys {
-		if !key.Empty() {
-			keys = append(keys, key)
+		if key.Id == SyntheticChild {
+			count++
 		}
 	}
-	return keys
-}
-
-func (n *Node) Ranges() HashSlice {
-	return append(append(HashSlice{n.Start}, KeySlice(n.Keys[:]).Keys()...), n.End)
-}
-
-func (n *Node) NonEmptyRanges() HashSlice {
-	return append(append(HashSlice{n.Start}, n.NonEmptyKeys().Keys()...), n.End)
+	return count
 }
 
 func (n *Node) ChildCount() int {
@@ -68,6 +73,24 @@ func (n *Node) Occupancy() int {
 	return count
 }
 
+func (n *Node) NonEmptyKeys() KeySlice {
+	var keys KeySlice
+	for _, key := range n.Keys {
+		if !key.Empty() {
+			keys = append(keys, key)
+		}
+	}
+	return keys
+}
+
+func (n *Node) Ranges() HashSlice {
+	return append(append(HashSlice{n.Start}, KeySlice(n.Keys[:]).Keys()...), n.End)
+}
+
+func (n *Node) NonEmptyRanges() HashSlice {
+	return append(append(HashSlice{n.Start}, n.NonEmptyKeys().Keys()...), n.End)
+}
+
 func (n *Node) SanityCheck() bool {
 	return n.NonEmptyRanges().IsSorted()
 }
@@ -80,34 +103,29 @@ func (n *Node) Distance() Hash {
 	return n.Start.Distance(n.End)
 }
 
-func (n *Node) Items() string {
+func (n *Node) String() string {
 	var items []string
 	for i := range n.Keys {
 		items = append(items, fmt.Sprintf("%08d\t%s", i, n.Keys[i]))
 	}
-	return strings.Join(items, "\n")
-}
-
-func (n *Node) String() string {
 	format := "Id:\t\t%d\nWell Formed:\t%t\nOccupancy:\t%d\nChildren:\t%d\nStart:\t\t%s\nEnd:\t\t%s\nDistance:\t%s\nStride:\t\t%s\n--------\n%s\n--------"
-	return fmt.Sprintf(format, n.Id, n.SanityCheck(), n.Occupancy(), n.ChildCount(), n.Start, n.End, n.Distance(), n.Stride(), n.Items())
+	return fmt.Sprintf(format, n.Id, n.SanityCheck(), n.Occupancy(), n.ChildCount(), n.Start, n.End, n.Distance(), n.Stride(), strings.Join(items, "\n"))
 }
 
 // sorting helpers
-
-func (n *Node) Len() int { return ItemCount }
-func (n *Node) Swap(i, j int) {
-	if n.Children[i] != EmptyChild ||
-		n.Children[j] != EmptyChild ||
-		n.Children[i+1] != EmptyChild ||
-		n.Children[j+1] != EmptyChild {
-		panic(fmt.Sprintf("Cannot swap:\n%s", n))
-	}
-	n.Keys[i], n.Keys[j] = n.Keys[j], n.Keys[i]
-}
 
 type nodeByKey struct {
 	*Node
 }
 
 func (n nodeByKey) Less(i, j int) bool { return n.Keys[i].Less(n.Keys[j]) }
+
+func (n *Node) Len() int { return ItemCount }
+func (n *Node) Swap(i, j int) {
+	if n.HasChild(i) || n.HasChild(j) {
+		panic(fmt.Sprintf("Cannot swap:\n%s", n))
+	}
+	n.Keys[i], n.Keys[j] = n.Keys[j], n.Keys[i]
+}
+func (n *Node) SortByKey()     { sort.Sort(&nodeByKey{n}) }
+func (n *Node) IsSortedByKey() { sort.IsSorted(&nodeByKey{n}) }

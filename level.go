@@ -9,22 +9,25 @@ import (
 type Level struct {
 	Nodes      int
 	Entries    int
+	Synthetics int
 	WellFormed int
 }
 
 func (l Level) String() string {
-	return fmt.Sprintf("Nodes: %8d\tEntries: %8d\tWellFormed: %8d", l.Nodes, l.Entries, l.WellFormed)
+	return fmt.Sprintf("Nodes: %8d\tEntries: %8d\tSynthetics: %8d\tWellFormed: %8d", l.Nodes, l.Entries, l.Synthetics, l.WellFormed)
 }
 
 func (l *Level) Add(b Level) {
 	l.Nodes += b.Nodes
 	l.Entries += b.Entries
+	l.Synthetics += b.Synthetics
 	l.WellFormed += b.WellFormed
 }
 
 func (l *Level) Merge(n *Node) {
 	l.Nodes++
 	l.Entries += n.Occupancy()
+	l.Synthetics += n.Synthetics()
 	if n.SanityCheck() {
 		l.WellFormed++
 	}
@@ -51,9 +54,9 @@ func (l LevelSlice) String() string {
 		share := float64(level.Nodes) / float64(total.Nodes) * 100
 		s = append(s, fmt.Sprintf("Level: %3d\t%s\tOccupied: %6.2f%%\tShare: %6.2f%%", i, level, occupied, share))
 	}
-	averageEntries := float64(total.Entries) / float64(total.Nodes)
+	averageEntries := float64(total.Entries-total.Synthetics) / float64(total.Nodes)
 	efficency := averageEntries / float64(ItemCount) * 100
-	s = append(s, fmt.Sprintf("Total:\t\t%s\tEntries/Node: %6.2f\t Efficiency: %6.2f%%", total, averageEntries, efficency))
+	s = append(s, fmt.Sprintf("Total:\t\t%s\tReal Entries/Node: %6.2f\t Efficiency: %6.2f%%", total, averageEntries, efficency))
 	return strings.Join(s, "\n")
 }
 

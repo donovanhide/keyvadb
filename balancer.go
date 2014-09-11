@@ -2,12 +2,14 @@ package keyva
 
 import (
 	"fmt"
+	"math/big"
 	"math/rand"
 	"sort"
 )
 
 type RandomBalancer struct{}
 type BufferBalancer struct{}
+type DistanceWithBufferBalancer struct{}
 
 type EmptyRange struct {
 	Start      Hash
@@ -43,10 +45,11 @@ func EmptyRanges(n *Node) []EmptyRange {
 	return empties
 }
 
-func (b *RandomBalancer) Balance(n *Node, v KeySlice) (insertions int) {
+func (b *RandomBalancer) Balance(n *Node, s KeySlice) KeySlice {
 	r := rand.New(rand.NewSource(int64(n.Id)))
+	remainder := s.Clone()
 	for _, empty := range EmptyRanges(n) {
-		sub := v.GetRange(empty.Start, empty.End)
+		sub := s.GetRange(empty.Start, empty.End)
 		switch {
 		case len(sub) == 0:
 			//Nothing to do
@@ -57,7 +60,7 @@ func (b *RandomBalancer) Balance(n *Node, v KeySlice) (insertions int) {
 			sort.Ints(picks)
 			for i, pick := range picks {
 				n.UpdateEntry(empty.StartIndex+i, sub[pick])
-				insertions++
+				remainder.Remove(sub[pick])
 			}
 		default:
 			//Place random
@@ -65,14 +68,14 @@ func (b *RandomBalancer) Balance(n *Node, v KeySlice) (insertions int) {
 			sort.Ints(locations)
 			for i, location := range locations {
 				n.UpdateEntry(empty.StartIndex+location, sub[i])
-				insertions++
+				remainder.Remove(sub[i])
 			}
 		}
 	}
-	return
+	return remainder
 }
 
-func (b *BufferBalancer) Balance(n *Node, s KeySlice) (insertions int) {
+func (b *BufferBalancer) Balance(n *Node, s KeySlice) KeySlice {
 	occupied := n.Occupancy()
 	switch {
 	case occupied+len(s) <= ItemCount:
@@ -81,21 +84,95 @@ func (b *BufferBalancer) Balance(n *Node, s KeySlice) (insertions int) {
 		for i, key := range s {
 			n.UpdateEntry(i, key)
 		}
-		sort.Sort(&nodeByKey{n})
-		insertions = len(s)
+		n.SortByKey()
+		return nil
 	case occupied < ItemCount:
 		// Merge random
+		remainder := s.Clone()
 		r := rand.New(rand.NewSource(int64(n.Id)))
 		picks := r.Perm(len(s))[:ItemCount-occupied]
 		sort.Ints(picks)
 		for i, pick := range picks {
 			n.UpdateEntry(i, s[pick])
-			insertions++
+			remainder.Remove(s[pick])
 		}
-		sort.Sort(&nodeByKey{n})
+		n.SortByKey()
+		return remainder
 	default:
 		// Nothing to do
 		// Node is full
+		return s
 	}
-	return
+}
+
+type DistanceSorter struct {
+	KeySlice
+	Start, End         *big.Int
+	Stride, HalfStride *big.Int
+}
+
+func NewDistanceSorter(s KeySlice, start, end Hash) *DistanceSorter {
+	stride := start.Stride(end, ItemCount)
+	return &DistanceSorter{
+		KeySlice:   s,
+		Start:      start.Big(),
+		End:        end.Big(),
+		Stride:     stride.Big(),
+		HalfStride: stride.Divide(2).Big(),
+	}
+}
+
+func (d *DistanceSorter) Less(i, j int) bool {
+	_, ld := d.KeySlice[i].Key.NearestStride(d.Start, d.Stride, d.HalfStride)
+	_, rd := d.KeySlice[j].Key.NearestStride(d.Start, d.Stride, d.HalfStride)
+	return ld.Less(rd)
+	// li, ld := d.KeySlice[i].Key.NearestStride(d.Start, d.Stride, d.HalfStride)
+	// ri, rd := d.KeySlice[j].Key.NearestStride(d.Start, d.Stride, d.HalfStride)
+	// if li == ri {
+	// 	return ld.Less(rd)
+	// }
+	// return li < ri
+}
+
+func (b *DistanceWithBufferBalancer) Balance(n *Node, s KeySlice) KeySlice {
+	occupied := n.Occupancy()
+	switch {
+	case occupied+len(s) <= ItemCount:
+		// No children yet
+		// Add items at the start and sort node
+		for i, key := range s {
+			n.UpdateEntry(i, key)
+		}
+		n.SortByKey()
+		return nil
+	case occupied < ItemCount:
+		// Merge and place in order
+		candidates := append(s.Clone(), n.NonEmptyKeys()...)
+		n.AddSyntheticKeys()
+		dist := NewDistanceSorter(candidates, n.Start, n.End)
+		sort.Sort(dist)
+		used := make(map[int]Key)
+		for _, candidate := range dist.KeySlice {
+			// Use distance to make calculation
+			// index, distance := candidate.Key.NearestStride(dist.Start, dist.Stride, dist.HalfStride)
+			index, _ := candidate.Key.NearestStride(dist.Start, dist.Stride, dist.HalfStride)
+			if _, ok := used[index]; !ok {
+				used[index] = candidate
+				n.UpdateEntry(index-1, candidate)
+			}
+			if len(used) == ItemCount {
+				break
+			}
+		}
+		n.SortByKey()
+		candidates.Sort()
+		for _, key := range used {
+			candidates.Remove(key)
+		}
+		return candidates
+	default:
+		// Nothing to do
+		// Node is full
+		return s
+	}
 }

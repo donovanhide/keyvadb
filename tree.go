@@ -39,11 +39,13 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 	if len(v) == 0 {
 		panic("no values to add")
 	}
+	maxInsertions := ItemCount - n.Occupancy()
 	debugPrintln(n)
-	expected := len(v)
-	insertions = t.balancer.Balance(n, v)
-	if insertions > expected {
-		panic(fmt.Sprintf("too many insertions: %d expected: %d", insertions, len(v)))
+	remainder := t.balancer.Balance(n, v)
+	debugPrintln(n)
+	insertions = len(v) - len(remainder)
+	if insertions > maxInsertions {
+		panic(fmt.Sprintf("too many insertions: %d max: %d", insertions, maxInsertions))
 	}
 	if !n.SanityCheck() {
 		panic(fmt.Sprintf("not sane:\n%s", n))
@@ -57,7 +59,7 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 		if childStart.Empty() || childEnd.Empty() {
 			continue
 		}
-		candidates := v.GetRange(childStart, childEnd)
+		candidates := remainder.GetRange(childStart, childEnd)
 		if len(candidates) == 0 {
 			continue
 		}

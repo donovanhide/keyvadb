@@ -62,14 +62,18 @@ var (
 	alreadyPresent = errors.New("already present")
 )
 
+func (s KeySlice) find(key Key) int {
+	return sort.Search(len(s), func(j int) bool {
+		return !s[j].Key.Less(key.Key)
+	})
+}
+
 // Exchange Key and Id at position i for value
 func (s KeySlice) TryExchange(n *Node, i int, key Key) error {
 	if n.HasChild(i) {
 		return entryHasChild
 	}
-	j := sort.Search(len(s), func(k int) bool {
-		return !s[k].Key.Less(key.Key)
-	})
+	j := s.find(key)
 	switch {
 	case j == len(s) || s[j].Id != key.Id:
 		return valueNotFound
@@ -80,6 +84,19 @@ func (s KeySlice) TryExchange(n *Node, i int, key Key) error {
 		s.Sort()
 		return nil
 	}
+}
+
+func (s *KeySlice) Remove(key Key) {
+	i := s.find(key)
+	if i < len(*s) && (*s)[i].Key.Equals(key.Key) {
+		*s = append((*s)[:i], (*s)[i+1:]...)
+	}
+}
+
+func (s KeySlice) Clone() KeySlice {
+	c := make(KeySlice, len(s))
+	copy(c, s)
+	return c
 }
 
 func (s KeySlice) String() string {
