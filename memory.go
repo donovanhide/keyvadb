@@ -1,4 +1,4 @@
-package keyva
+package keyvadb
 
 type NodeCache map[uint64]*Node
 type KeyValueCache []*KeyValue

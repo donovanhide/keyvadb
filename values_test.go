@@ -1,4 +1,4 @@
-package keyva
+package keyvadb
 
 import . "gopkg.in/check.v1"
 

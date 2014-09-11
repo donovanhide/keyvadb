@@ -1,4 +1,4 @@
-package keyva
+package keyvadb
 
 import (
 	"errors"

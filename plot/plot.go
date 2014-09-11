@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/donovanhide/keyva"
+	"github.com/donovanhide/keyvadb"
 	"github.com/dustin/randbo"
 
 	"code.google.com/p/plotinum/plot"
@@ -20,7 +20,7 @@ var rounds = flag.Int("rounds", 100, "number of batches")
 var entries = flag.Int("entries", 8, "number of entries per tree node")
 var seed = flag.Int64("seed", 0, "seed for RNG")
 
-type levelData map[string][]keyva.LevelSlice
+type levelData map[string][]keyvadb.LevelSlice
 
 func checkErr(err error) {
 	if err != nil {
@@ -31,12 +31,12 @@ func checkErr(err error) {
 func main() {
 	flag.Parse()
 	data := make(levelData)
-	for _, balancer := range keyva.Balancers {
-		ms := keyva.NewMemoryKeyStore()
-		mv := keyva.NewMemoryValueStore()
+	for _, balancer := range keyvadb.Balancers {
+		ms := keyvadb.NewMemoryKeyStore()
+		mv := keyvadb.NewMemoryValueStore()
 		r := randbo.NewFrom(rand.NewSource(*seed))
-		gen := keyva.NewRandomValueGenerator(10, 50, r)
-		tree, err := keyva.NewTree(ms, mv, balancer.Balancer)
+		gen := keyvadb.NewRandomValueGenerator(10, 50, r)
+		tree, err := keyvadb.NewTree(ms, mv, balancer.Balancer)
 		checkErr(err)
 		sum := 0
 		for i := 0; i < *rounds; i++ {
