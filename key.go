@@ -1,7 +1,6 @@
 package keyva
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"sort"
@@ -12,24 +11,22 @@ type Key struct {
 	Id  uint64
 }
 
-type KeyValue struct {
-	Key
-	Value []byte
-}
-
 type KeySlice []Key
-type KeyValueSlice []KeyValue
 
 func (k Key) String() string {
 	return fmt.Sprintf("%s:%d", k.Key, k.Id)
 }
 
-func (kv KeyValue) String() string {
-	return fmt.Sprintf("%s:%X", kv.Key, kv.Value)
+func (k Key) Empty() bool {
+	return k.Key.Empty()
+}
+
+func (a Key) Less(b Key) bool {
+	return a.Key.Less(b.Key)
 }
 
 func (s KeySlice) Len() int           { return len(s) }
-func (s KeySlice) Less(i, j int) bool { return bytes.Compare(s[i].Key[:], s[j].Key[:]) < 0 }
+func (s KeySlice) Less(i, j int) bool { return s[i].Less(s[j]) }
 func (s KeySlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s KeySlice) Sort()              { sort.Sort(s) }
 func (s KeySlice) IsSorted() bool     { return sort.IsSorted(s) }
@@ -79,7 +76,7 @@ func (s KeySlice) TryExchange(n *Node, i int, key Key) error {
 	case s[j].Id == key.Id:
 		return alreadyPresent
 	default:
-		s[j].Id, s[j].Key, n.Values[i], n.Keys[i] = n.Values[i], n.Keys[i], s[j].Id, s[j].Key
+		s[j], n.Keys[i] = n.Keys[i], s[j]
 		s.Sort()
 		return nil
 	}
@@ -95,12 +92,4 @@ func (s KeySlice) Keys() HashSlice {
 		keys = append(keys, key.Key)
 	}
 	return keys
-}
-
-func (s KeyValueSlice) Keys() KeySlice {
-	var k KeySlice
-	for _, kv := range s {
-		k = append(k, kv.Key)
-	}
-	return k
 }

@@ -56,7 +56,7 @@ func (b *RandomBalancer) Balance(n *Node, v KeySlice) (insertions int) {
 			picks := r.Perm(len(sub))[:empty.Len()]
 			sort.Ints(picks)
 			for i, pick := range picks {
-				n.UpdateEntry(empty.StartIndex+i, sub[pick].Key, sub[pick].Id)
+				n.UpdateEntry(empty.StartIndex+i, sub[pick])
 				insertions++
 			}
 		default:
@@ -64,7 +64,7 @@ func (b *RandomBalancer) Balance(n *Node, v KeySlice) (insertions int) {
 			locations := r.Perm(empty.Len())[:len(sub)]
 			sort.Ints(locations)
 			for i, location := range locations {
-				n.UpdateEntry(empty.StartIndex+location, sub[i].Key, sub[i].Id)
+				n.UpdateEntry(empty.StartIndex+location, sub[i])
 				insertions++
 			}
 		}
@@ -72,24 +72,24 @@ func (b *RandomBalancer) Balance(n *Node, v KeySlice) (insertions int) {
 	return
 }
 
-func (b *BufferBalancer) Balance(n *Node, v KeySlice) (insertions int) {
+func (b *BufferBalancer) Balance(n *Node, s KeySlice) (insertions int) {
 	occupied := n.Occupancy()
 	switch {
-	case occupied+len(v) <= ItemCount:
+	case occupied+len(s) <= ItemCount:
 		// No children yet
 		// Add items at the start and sort node
-		for i, v := range v {
-			n.UpdateEntry(i, v.Key, v.Id)
+		for i, key := range s {
+			n.UpdateEntry(i, key)
 		}
 		sort.Sort(&nodeByKey{n})
-		insertions = len(v)
+		insertions = len(s)
 	case occupied < ItemCount:
 		// Merge random
 		r := rand.New(rand.NewSource(int64(n.Id)))
-		picks := r.Perm(len(v))[:ItemCount-occupied]
+		picks := r.Perm(len(s))[:ItemCount-occupied]
 		sort.Ints(picks)
 		for i, pick := range picks {
-			n.UpdateEntry(i, v[pick].Key, v[pick].Id)
+			n.UpdateEntry(i, s[pick])
 			insertions++
 		}
 		sort.Sort(&nodeByKey{n})

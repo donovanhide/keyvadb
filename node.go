@@ -11,29 +11,8 @@ type Node struct {
 	Id       uint64
 	Start    Hash
 	End      Hash
-	Keys     [ItemCount]Hash
-	Values   [ItemCount]uint64
+	Keys     [ItemCount]Key
 	Children [ChildCount]uint64
-}
-
-func (n *Node) Movable() []int {
-	var movable []int
-	for i := 0; i < ItemCount; i++ {
-		if !n.HasChild(i) && !n.Empty(i) {
-			movable = append(movable, i)
-		}
-	}
-	return movable
-}
-
-func (n *Node) Updatabale() []int {
-	var updatable []int
-	for i := 0; i < ItemCount; i++ {
-		if !n.HasChild(i) {
-			updatable = append(updatable, i)
-		}
-	}
-	return updatable
 }
 
 func (n *Node) Empty(i int) bool {
@@ -44,16 +23,15 @@ func (n *Node) HasChild(i int) bool {
 	return n.Children[i] != EmptyChild || n.Children[i+1] != EmptyChild
 }
 
-func (n *Node) UpdateEntry(i int, key Hash, id uint64) {
+func (n *Node) UpdateEntry(i int, key Key) {
 	if n.HasChild(i) {
 		panic("cannot update entry with child")
 	}
 	n.Keys[i] = key
-	n.Values[i] = id
 }
 
-func (n *Node) NonEmptyKeys() HashSlice {
-	var keys HashSlice
+func (n *Node) NonEmptyKeys() KeySlice {
+	var keys KeySlice
 	for _, key := range n.Keys {
 		if !key.Empty() {
 			keys = append(keys, key)
@@ -63,11 +41,11 @@ func (n *Node) NonEmptyKeys() HashSlice {
 }
 
 func (n *Node) Ranges() HashSlice {
-	return append(append(HashSlice{n.Start}, n.Keys[:]...), n.End)
+	return append(append(HashSlice{n.Start}, KeySlice(n.Keys[:]).Keys()...), n.End)
 }
 
 func (n *Node) NonEmptyRanges() HashSlice {
-	return append(append(HashSlice{n.Start}, n.NonEmptyKeys()...), n.End)
+	return append(append(HashSlice{n.Start}, n.NonEmptyKeys().Keys()...), n.End)
 }
 
 func (n *Node) ChildCount() int {
@@ -105,7 +83,7 @@ func (n *Node) Distance() Hash {
 func (n *Node) Items() string {
 	var items []string
 	for i := range n.Keys {
-		items = append(items, fmt.Sprintf("%08d\t%s %d", i, n.Keys[i], n.Values[i]))
+		items = append(items, fmt.Sprintf("%08d\t%s", i, n.Keys[i]))
 	}
 	return strings.Join(items, "\n")
 }
@@ -125,11 +103,11 @@ func (n *Node) Swap(i, j int) {
 		n.Children[j+1] != EmptyChild {
 		panic(fmt.Sprintf("Cannot swap:\n%s", n))
 	}
-	n.Keys[i], n.Keys[j], n.Values[i], n.Values[j] = n.Keys[j], n.Keys[i], n.Values[j], n.Values[i]
+	n.Keys[i], n.Keys[j] = n.Keys[j], n.Keys[i]
 }
 
 type nodeByKey struct {
 	*Node
 }
 
-func (n nodeByKey) Less(i, j int) bool { return n.Keys[i].Compare(n.Keys[j]) < 0 }
+func (n nodeByKey) Less(i, j int) bool { return n.Keys[i].Less(n.Keys[j]) }

@@ -48,7 +48,7 @@ func newHash(n *big.Int) Hash {
 }
 
 func (h Hash) Empty() bool {
-	return h.Equals(EmptyItem)
+	return h.Equals(EmptyKey)
 }
 
 func (a Hash) Compare(b Hash) int {
