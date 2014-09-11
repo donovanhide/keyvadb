@@ -8,7 +8,7 @@ import (
 
 const (
 	HashSize       = 32
-	ItemCount      = 8
+	ItemCount      = 6
 	ChildCount     = ItemCount + 1
 	EmptyChild     = uint64(0)
 	SyntheticChild = math.MaxUint64

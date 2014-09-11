@@ -7,9 +7,18 @@ import (
 	"sort"
 )
 
+var Balancers = []struct {
+	Name     string
+	Balancer Balancer
+}{
+	{"Random", &RandomBalancer{}},
+	{"Buffer", &BufferBalancer{}},
+	{"Distance", &DistanceBalancer{}},
+}
+
 type RandomBalancer struct{}
 type BufferBalancer struct{}
-type DistanceWithBufferBalancer struct{}
+type DistanceBalancer struct{}
 
 type EmptyRange struct {
 	Start      Hash
@@ -134,7 +143,7 @@ func (d *DistanceSorter) Less(i, j int) bool {
 	// return li < ri
 }
 
-func (b *DistanceWithBufferBalancer) Balance(n *Node, s KeySlice) KeySlice {
+func (b *DistanceBalancer) Balance(n *Node, s KeySlice) KeySlice {
 	occupied := n.Occupancy()
 	switch {
 	case occupied+len(s) <= ItemCount:
