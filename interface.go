@@ -13,11 +13,11 @@ type KeyStore interface {
 }
 
 type ValueStore interface {
-	Append(*Value) (uint64, error)
-	Get(id uint64) (*Value, error)
-	Each(func(int, *Value) error) error
+	Append(*KeyValue) (uint64, error)
+	Get(id uint64) (*KeyValue, error)
+	Each(func(int, *KeyValue) error) error
 }
 
 type Balancer interface {
-	Balance(n *Node, v ValueSlice) int
+	Balance(n *Node, v KeySlice) int
 }

@@ -21,33 +21,35 @@ func NewRandomValueGenerator(minValue, maxValue uint16, r io.Reader) *RandomValu
 	}
 }
 
-func (r *RandomValueGenerator) Next() (*Value, error) {
+func (r *RandomValueGenerator) Next() (*KeyValue, error) {
 	hasher := sha512.New()
 	var length uint16
 	if err := binary.Read(r.r, binary.BigEndian, &length); err != nil {
 		return nil, err
 	}
 	length = (length % (r.max - r.min)) + r.min
-	v := &Value{
-		Id:    atomic.AddUint64(&r.count, 1),
+	kv := &KeyValue{
+		Key: Key{
+			Id: atomic.AddUint64(&r.count, 1),
+		},
 		Value: make([]byte, length),
 	}
-	if _, err := r.r.Read(v.Value[:]); err != nil {
+	if _, err := r.r.Read(kv.Value[:]); err != nil {
 		return nil, err
 	}
-	hasher.Write(v.Value)
-	copy(v.Key[:], hasher.Sum(nil))
-	return v, nil
+	hasher.Write(kv.Value)
+	copy(kv.Key.Key[:], hasher.Sum(nil))
+	return kv, nil
 }
 
-func (r *RandomValueGenerator) Take(n int) (ValueSlice, error) {
-	values := make(ValueSlice, n)
+func (r *RandomValueGenerator) Take(n int) (KeyValueSlice, error) {
+	kv := make(KeyValueSlice, n)
 	for i := 0; i < n; i++ {
 		v, err := r.Next()
 		if err != nil {
 			return nil, err
 		}
-		values[i] = *v
+		kv[i] = *v
 	}
-	return values, nil
+	return kv, nil
 }

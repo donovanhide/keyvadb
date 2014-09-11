@@ -17,47 +17,46 @@ type KeyValue struct {
 	Value []byte
 }
 
-type Value struct {
-	Id    uint64
-	Key   Hash
-	Value []byte
+type KeySlice []Key
+type KeyValueSlice []KeyValue
+
+func (k Key) String() string {
+	return fmt.Sprintf("%s:%d", k.Key, k.Id)
 }
 
-type ValueSlice []Value
-
-func (v Value) String() string {
-	return fmt.Sprintf("%s:%X", v.Key, v.Value)
+func (kv KeyValue) String() string {
+	return fmt.Sprintf("%s:%X", kv.Key, kv.Value)
 }
 
-func (v ValueSlice) Len() int           { return len(v) }
-func (v ValueSlice) Less(i, j int) bool { return bytes.Compare(v[i].Key[:], v[j].Key[:]) < 0 }
-func (v ValueSlice) Swap(i, j int)      { v[i], v[j] = v[j], v[i] }
-func (v ValueSlice) Sort()              { sort.Sort(v) }
-func (v ValueSlice) IsSorted() bool     { return sort.IsSorted(v) }
+func (s KeySlice) Len() int           { return len(s) }
+func (s KeySlice) Less(i, j int) bool { return bytes.Compare(s[i].Key[:], s[j].Key[:]) < 0 }
+func (s KeySlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s KeySlice) Sort()              { sort.Sort(s) }
+func (s KeySlice) IsSorted() bool     { return sort.IsSorted(s) }
 
-// Returns all values in v between, but not including start and end
-func (v ValueSlice) GetRange(start, end Hash) ValueSlice {
-	if len(v) == 0 {
+// Returns all keys in s between, but not including start and end
+func (s KeySlice) GetRange(start, end Hash) KeySlice {
+	if len(s) == 0 {
 		return nil
 	}
-	first := sort.Search(len(v), func(i int) bool {
-		return v[i].Key.Compare(start) >= 0
+	first := sort.Search(len(s), func(i int) bool {
+		return s[i].Key.Compare(start) >= 0
 	})
-	last := sort.Search(len(v)-first, func(i int) bool {
-		return v[i+first].Key.Compare(end) >= 0
+	last := sort.Search(len(s)-first, func(i int) bool {
+		return s[i+first].Key.Compare(end) >= 0
 	}) + first
 	switch {
-	case first == len(v):
+	case first == len(s):
 		return nil
-	case v[first].Key.Equals(start) && first+1 == len(v):
+	case s[first].Key.Equals(start) && first+1 == len(s):
 		return nil
-	case v[first].Key.Equals(start):
+	case s[first].Key.Equals(start):
 		first++
 	}
 	if last < 0 || first > last {
 		return nil
 	}
-	return v[first:last]
+	return s[first:last]
 }
 
 var (
@@ -67,33 +66,41 @@ var (
 )
 
 // Exchange Key and Id at position i for value
-func (v ValueSlice) TryExchange(n *Node, i int, value Value) error {
+func (s KeySlice) TryExchange(n *Node, i int, key Key) error {
 	if n.HasChild(i) {
 		return entryHasChild
 	}
-	j := sort.Search(len(v), func(k int) bool {
-		return !v[k].Key.Less(value.Key)
+	j := sort.Search(len(s), func(k int) bool {
+		return !s[k].Key.Less(key.Key)
 	})
 	switch {
-	case j == len(v) || v[j].Id != value.Id:
+	case j == len(s) || s[j].Id != key.Id:
 		return valueNotFound
-	case v[j].Id == value.Id:
+	case s[j].Id == key.Id:
 		return alreadyPresent
 	default:
-		v[j].Id, v[j].Key, n.Values[i], n.Keys[i] = n.Values[i], n.Keys[i], v[j].Id, v[j].Key
-		v.Sort()
+		s[j].Id, s[j].Key, n.Values[i], n.Keys[i] = n.Values[i], n.Keys[i], s[j].Id, s[j].Key
+		s.Sort()
 		return nil
 	}
 }
 
-func (v ValueSlice) String() string {
-	return dumpWithTitle("Values", v.Keys(), 0)
+func (s KeySlice) String() string {
+	return dumpWithTitle("Values", s.Keys(), 0)
 }
 
-func (v ValueSlice) Keys() HashSlice {
+func (s KeySlice) Keys() HashSlice {
 	var keys HashSlice
-	for i := range v {
-		keys = append(keys, v[i].Key)
+	for _, key := range s {
+		keys = append(keys, key.Key)
 	}
 	return keys
+}
+
+func (s KeyValueSlice) Keys() KeySlice {
+	var k KeySlice
+	for _, kv := range s {
+		k = append(k, kv.Key)
+	}
+	return k
 }

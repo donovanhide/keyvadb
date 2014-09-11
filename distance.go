@@ -40,7 +40,7 @@ func (m DistanceMap) AddNode(n *Node) {
 	}
 }
 
-func (m DistanceMap) AddValues(v ValueSlice) {
+func (m DistanceMap) AddValues(v KeySlice) {
 	for _, value := range v {
 		m.add(value.Id, value.Key)
 	}

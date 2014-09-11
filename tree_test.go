@@ -14,12 +14,13 @@ func (s *KeyVaSuite) TestTree(c *C) {
 		gen := NewRandomValueGenerator(10, 50, s.R)
 		sum := 0
 		for i := 0; i < rounds; i++ {
-			values, err := gen.Take(n)
+			kv, err := gen.Take(n)
 			c.Assert(err, IsNil, msg)
-			values.Sort()
-			n, err := tree.Add(values)
+			keys := kv.Keys()
+			keys.Sort()
+			n, err := tree.Add(keys)
 			c.Assert(err, IsNil, msg)
-			c.Assert(n, Equals, len(values), msg)
+			c.Assert(n, Equals, len(keys), msg)
 			levels, err := tree.Levels()
 			c.Assert(err, IsNil, msg)
 			c.Log(levels)

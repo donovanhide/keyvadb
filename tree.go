@@ -35,7 +35,7 @@ func NewTree(keys KeyStore, values ValueStore, balancer Balancer) (*Tree, error)
 	}, nil
 }
 
-func (t *Tree) add(n *Node, v ValueSlice) (insertions int, err error) {
+func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 	if len(v) == 0 {
 		panic("no values to add")
 	}
@@ -86,7 +86,7 @@ func (t *Tree) add(n *Node, v ValueSlice) (insertions int, err error) {
 }
 
 // Returns number of values inserted and an error if encountered
-func (t *Tree) Add(values ValueSlice) (int, error) {
+func (t *Tree) Add(values KeySlice) (int, error) {
 	if !values.IsSorted() {
 		return 0, fmt.Errorf("unsorted values provided")
 	}

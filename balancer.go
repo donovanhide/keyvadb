@@ -8,9 +8,6 @@ import (
 
 type RandomBalancer struct{}
 type BufferBalancer struct{}
-type BufferWithFitting struct{}
-type DistanceBalancer2 struct{}
-type DistanceBalancer struct{}
 
 type EmptyRange struct {
 	Start      Hash
@@ -46,7 +43,7 @@ func EmptyRanges(n *Node) []EmptyRange {
 	return empties
 }
 
-func (b *RandomBalancer) Balance(n *Node, v ValueSlice) (insertions int) {
+func (b *RandomBalancer) Balance(n *Node, v KeySlice) (insertions int) {
 	r := rand.New(rand.NewSource(int64(n.Id)))
 	for _, empty := range EmptyRanges(n) {
 		sub := v.GetRange(empty.Start, empty.End)
@@ -75,7 +72,7 @@ func (b *RandomBalancer) Balance(n *Node, v ValueSlice) (insertions int) {
 	return
 }
 
-func (b *BufferBalancer) Balance(n *Node, v ValueSlice) (insertions int) {
+func (b *BufferBalancer) Balance(n *Node, v KeySlice) (insertions int) {
 	occupied := n.Occupancy()
 	switch {
 	case occupied+len(v) <= ItemCount:
@@ -96,54 +93,6 @@ func (b *BufferBalancer) Balance(n *Node, v ValueSlice) (insertions int) {
 			insertions++
 		}
 		sort.Sort(&nodeByKey{n})
-	default:
-		// Nothing to do
-		// Node is full
-	}
-	return
-}
-
-func (b *BufferWithFitting) Balance(n *Node, v ValueSlice) (insertions int) {
-	occupied := n.Occupancy()
-	switch {
-	case occupied+len(v) <= ItemCount:
-		// No children yet
-		// Add items at the start and sort node
-		for i, v := range v {
-			n.UpdateEntry(i, v.Key, v.Id)
-		}
-		sort.Sort(&nodeByKey{n})
-		insertions = len(v)
-		// fmt.Println(n)
-	case occupied < ItemCount:
-		// Merge best fits from n.Items and v
-		// halfStride := n.Stride().Divide(2).Big()
-		// // sort.Sort(&nodeByDistance{
-		// // 	Node:       n,
-		// // 	HalfStride: halfStride,
-		// // })
-		// fmt.Println(n)
-		// fmt.Println(v)
-		dist := NewDistanceMap(n)
-		dist.AddValues(v)
-		if !dist.SanityCheck() || dist.Count() != len(v) {
-			panic("!")
-		}
-		// fmt.Println(dist)
-		for i := 0; i < ItemCount; i++ {
-			if candidate := dist.TakeBest(i + 1); candidate != nil {
-				n.UpdateEntry(i, candidate.Key, candidate.Id)
-				insertions++
-			}
-		}
-		if n.Occupancy() != ItemCount {
-			fmt.Println(n)
-			fmt.Println(dist)
-			panic("Node not full")
-		}
-		// fmt.Println(n)
-		sort.Sort(&nodeByKey{n})
-		sort.Sort(v)
 	default:
 		// Nothing to do
 		// Node is full
