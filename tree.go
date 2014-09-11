@@ -40,8 +40,12 @@ func (t *Tree) add(n *Node, v ValueSlice) (insertions int, err error) {
 		panic("no values to add")
 	}
 	debugPrintln(n)
+	expected := len(v)
 	insertions = t.balancer.Balance(n, v)
-	if !n.SanityCheck() || insertions > len(v) {
+	if insertions > expected {
+		panic(fmt.Sprintf("too many insertions: %d expected: %d", insertions, len(v)))
+	}
+	if !n.SanityCheck() {
 		panic(fmt.Sprintf("not sane:\n%s", n))
 	}
 	if insertions == len(v) {
@@ -74,6 +78,9 @@ func (t *Tree) add(n *Node, v ValueSlice) (insertions int, err error) {
 		if err != nil {
 			return
 		}
+	}
+	if len(v) != insertions {
+		panic(fmt.Sprintf("Wrong number of insertions: Expected:%d Got:%d\n", len(v), insertions))
 	}
 	return
 }

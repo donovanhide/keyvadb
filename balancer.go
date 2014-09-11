@@ -9,6 +9,8 @@ import (
 type RandomBalancer struct{}
 type BufferBalancer struct{}
 type BufferWithFitting struct{}
+type DistanceBalancer2 struct{}
+type DistanceBalancer struct{}
 
 type EmptyRange struct {
 	Start      Hash
@@ -123,15 +125,21 @@ func (b *BufferWithFitting) Balance(n *Node, v ValueSlice) (insertions int) {
 		// fmt.Println(n)
 		// fmt.Println(v)
 		dist := NewDistanceMap(n)
-		dist.Add(v)
-		fmt.Println(dist)
-		for i, value := range n.Keys {
-			candidate := dist.Get(i)
-			fmt.Println(i, candidate)
-			if value.Empty() && candidate != nil {
+		dist.AddValues(v)
+		if !dist.SanityCheck() || dist.Count() != len(v) {
+			panic("!")
+		}
+		// fmt.Println(dist)
+		for i := 0; i < ItemCount; i++ {
+			if candidate := dist.TakeBest(i + 1); candidate != nil {
 				n.UpdateEntry(i, candidate.Key, candidate.Id)
 				insertions++
 			}
+		}
+		if n.Occupancy() != ItemCount {
+			fmt.Println(n)
+			fmt.Println(dist)
+			panic("Node not full")
 		}
 		// fmt.Println(n)
 		sort.Sort(&nodeByKey{n})

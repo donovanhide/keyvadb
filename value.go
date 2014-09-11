@@ -2,9 +2,20 @@ package keyva
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"sort"
 )
+
+type Key struct {
+	Key Hash
+	Id  uint64
+}
+
+type KeyValue struct {
+	Key
+	Value []byte
+}
 
 type Value struct {
 	Id    uint64
@@ -47,6 +58,32 @@ func (v ValueSlice) GetRange(start, end Hash) ValueSlice {
 		return nil
 	}
 	return v[first:last]
+}
+
+var (
+	entryHasChild  = errors.New("entry has child")
+	valueNotFound  = errors.New("value not found")
+	alreadyPresent = errors.New("already present")
+)
+
+// Exchange Key and Id at position i for value
+func (v ValueSlice) TryExchange(n *Node, i int, value Value) error {
+	if n.HasChild(i) {
+		return entryHasChild
+	}
+	j := sort.Search(len(v), func(k int) bool {
+		return !v[k].Key.Less(value.Key)
+	})
+	switch {
+	case j == len(v) || v[j].Id != value.Id:
+		return valueNotFound
+	case v[j].Id == value.Id:
+		return alreadyPresent
+	default:
+		v[j].Id, v[j].Key, n.Values[i], n.Keys[i] = n.Values[i], n.Keys[i], v[j].Id, v[j].Key
+		v.Sort()
+		return nil
+	}
 }
 
 func (v ValueSlice) String() string {

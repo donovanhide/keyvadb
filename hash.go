@@ -59,6 +59,14 @@ func (a Hash) Equals(b Hash) bool {
 	return a.Compare(b) == 0
 }
 
+func (a Hash) Less(b Hash) bool {
+	return a.Compare(b) < 0
+}
+
+func (a Hash) Greater(b Hash) bool {
+	return a.Compare(b) > 0
+}
+
 func (h Hash) Big() *big.Int {
 	return big.NewInt(0).SetBytes(h[:])
 }
@@ -93,16 +101,25 @@ func (a Hash) Multiply(n int64) Hash {
 	return newHash(product.Mul(product, big.NewInt(n)))
 }
 
-// Returns multiple of stride and distance
-func (a Hash) NearestStride(start Hash, stride, halfStride *big.Int) (int, Hash) {
-	quot := a.Sub(start).Big()
+// Returns multiple of stride and distance.
+// Rounds up and down if the extents are matched
+func (a Hash) NearestStride(start, stride, halfStride *big.Int) (int, Hash) {
+	quot := a.Big()
 	rem := big.NewInt(0)
-	quot.QuoRem(quot, stride, rem)
+	quot.Sub(quot, start).QuoRem(quot, stride, rem)
 	i := quot.Int64()
-	if rem.Cmp(halfStride) > 0 {
+	// fmt.Println(i, a, newHash(rem), newHash(halfStride))
+	switch {
+	case i == 0:
+		// Shift up
 		i++
-		halfStride.Sub(rem, halfStride)
+		rem.Sub(a.Big(), stride).Sub(rem, start)
+	case i < ItemCount && rem.Cmp(halfStride) > 0:
+		// Round up
+		i++
+		rem.Sub(stride, rem)
 	}
+	// fmt.Println(i, newHash(rem))
 	return int(i), newHash(rem)
 }
 

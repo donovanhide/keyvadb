@@ -23,9 +23,9 @@ func (s *KeyVaSuite) TestDistance(c *C) {
 		End:   LastHash,
 	}
 	dist := NewDistanceMap(n)
-	dist.Add(distanceValues)
+	dist.AddValues(distanceValues)
 	c.Log(n)
 	c.Log(dist)
-	c.Assert(dist.Len(), Equals, 4)
+	c.Assert(dist.Len(), Equals, 5)
 	c.Assert(dist.SanityCheck(), Equals, true)
 }

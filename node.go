@@ -16,8 +16,36 @@ type Node struct {
 	Children [ChildCount]uint64
 }
 
+func (n *Node) Movable() []int {
+	var movable []int
+	for i := 0; i < ItemCount; i++ {
+		if !n.HasChild(i) && !n.Empty(i) {
+			movable = append(movable, i)
+		}
+	}
+	return movable
+}
+
+func (n *Node) Updatabale() []int {
+	var updatable []int
+	for i := 0; i < ItemCount; i++ {
+		if !n.HasChild(i) {
+			updatable = append(updatable, i)
+		}
+	}
+	return updatable
+}
+
+func (n *Node) Empty(i int) bool {
+	return n.Keys[i].Empty()
+}
+
+func (n *Node) HasChild(i int) bool {
+	return n.Children[i] != EmptyChild || n.Children[i+1] != EmptyChild
+}
+
 func (n *Node) UpdateEntry(i int, key Hash, id uint64) {
-	if n.Children[i] != EmptyChild || n.Children[i+1] != EmptyChild {
+	if n.HasChild(i) {
 		panic("cannot update entry with child")
 	}
 	n.Keys[i] = key
@@ -77,7 +105,7 @@ func (n *Node) Distance() Hash {
 func (n *Node) Items() string {
 	var items []string
 	for i := range n.Keys {
-		items = append(items, fmt.Sprintf("%08d\t%s %d %d", i, n.Keys[i], n.Values[i], n.Children[i]))
+		items = append(items, fmt.Sprintf("%08d\t%s %d", i, n.Keys[i], n.Values[i]))
 	}
 	return strings.Join(items, "\n")
 }
@@ -105,17 +133,3 @@ type nodeByKey struct {
 }
 
 func (n nodeByKey) Less(i, j int) bool { return n.Keys[i].Compare(n.Keys[j]) < 0 }
-
-// type nodeByDistance struct {
-// 	*Node
-// 	HalfStride *big.Int
-// }
-
-// func (n nodeByDistance) Less(i, j int) bool {
-// 	leftIndex, leftDistance := n.Keys[i].NearestStride(n.HalfStride)
-// 	rightIndex, rightDistance := n.Keys[j].NearestStride(n.HalfStride)
-// 	if leftIndex == rightIndex {
-// 		return leftDistance.Compare(rightDistance) < 0
-// 	}
-// 	return leftIndex < rightIndex
-// }

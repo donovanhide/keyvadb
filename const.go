@@ -1,12 +1,17 @@
 package keyva
 
-import "math/big"
+import (
+	"math"
+
+	"math/big"
+)
 
 const (
-	HashSize   = 32
-	ItemCount  = 8
-	ChildCount = ItemCount + 1
-	EmptyChild = uint64(0)
+	HashSize       = 32
+	ItemCount      = 8
+	ChildCount     = ItemCount + 1
+	EmptyChild     = uint64(0)
+	SyntheticChild = math.MaxUint64
 )
 
 var (
