@@ -10,7 +10,7 @@ func (s *KeyVaSuite) TestTree(c *C) {
 		tree, err := NewTree(ks, vs, balancer)
 		c.Assert(err, IsNil, msg)
 		n := 10000
-		rounds := 100
+		rounds := 10
 		gen := NewRandomValueGenerator(10, 50, s.R)
 		sum := 0
 		for i := 0; i < rounds; i++ {
