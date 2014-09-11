@@ -9,10 +9,6 @@ import (
 
 var debug = flag.Bool("debug", false, "Debug output")
 
-func init() {
-	flag.Parse()
-}
-
 func dumpWithTitle(title string, data interface{}, indent int) string {
 	if reflect.TypeOf(data).Kind() != reflect.Slice {
 		panic(fmt.Sprintf("cannot dump %+v", data))

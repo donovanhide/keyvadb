@@ -54,6 +54,7 @@ func main() {
 		}
 	}
 	checkErr(save(entriesPlot(data)))
+	checkErr(save(distributionPlot(data)))
 }
 
 func entriesPlot(data levelData) (*plot.Plot, string) {
@@ -73,6 +74,25 @@ func entriesPlot(data levelData) (*plot.Plot, string) {
 	}
 	checkErr(plotutil.AddLinePoints(p, pts...))
 	return p, "Average filled entries per node"
+}
+
+func distributionPlot(data levelData) (*plot.Plot, string) {
+	p, err := plot.New()
+	checkErr(err)
+	p.X.Label.Text = "Level"
+	p.Y.Label.Text = "Nodes"
+	var pts []interface{}
+	for name, levels := range data {
+		last := levels[len(levels)-1]
+		points := make(plotter.XYs, len(last))
+		for i, level := range last {
+			points[i].X = float64(i)
+			points[i].Y = float64(level.Nodes)
+		}
+		pts = append(pts, []interface{}{name, points}...)
+	}
+	checkErr(plotutil.AddLinePoints(p, pts...))
+	return p, "Nodes per level"
 }
 
 func save(p *plot.Plot, title string) error {

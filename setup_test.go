@@ -1,6 +1,7 @@
 package keyva
 
 import (
+	"flag"
 	"io"
 	"math/rand"
 	"testing"
@@ -8,6 +9,10 @@ import (
 	"github.com/dustin/randbo"
 	. "gopkg.in/check.v1"
 )
+
+func init() {
+	flag.Parse()
+}
 
 func Test(t *testing.T) { TestingT(t) }
 
