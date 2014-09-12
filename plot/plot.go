@@ -101,17 +101,3 @@ func save(p *plot.Plot, title string) error {
 	filename := strings.Replace(strings.ToLower(title), " ", "_", -1) + ".svg"
 	return p.Save(10, 6, filename)
 }
-
-// randomPoints returns some random x, y points.
-func randomPoints(n int) plotter.XYs {
-	pts := make(plotter.XYs, n)
-	for i := range pts {
-		if i == 0 {
-			pts[i].X = rand.Float64()
-		} else {
-			pts[i].X = pts[i-1].X + rand.Float64()
-		}
-		pts[i].Y = pts[i].X + 10*rand.Float64()
-	}
-	return pts
-}
