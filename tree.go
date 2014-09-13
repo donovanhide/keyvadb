@@ -7,20 +7,19 @@ import (
 )
 
 type Tree struct {
+	Degree   uint64
 	root     *Node
 	keys     KeyStore
 	values   ValueStore
 	balancer Balancer
 }
 
-func NewTree(keys KeyStore, values ValueStore, balancer Balancer) (*Tree, error) {
+func NewTree(degree uint64, keys KeyStore, values ValueStore, balancer Balancer) (*Tree, error) {
 	root, err := keys.Get(0)
 	switch {
 	case err == ErrNotFound:
-		root = &Node{
-			Start: FirstHash,
-			End:   LastHash,
-		}
+		root = NewNode(FirstHash, LastHash, 0, degree)
+		root.AddSyntheticKeys()
 	case err != nil:
 		return nil, err
 	}
@@ -28,6 +27,7 @@ func NewTree(keys KeyStore, values ValueStore, balancer Balancer) (*Tree, error)
 		return nil, err
 	}
 	return &Tree{
+		Degree:   degree,
 		root:     root,
 		keys:     keys,
 		values:   values,
@@ -39,7 +39,7 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 	if len(v) == 0 {
 		panic("no values to add")
 	}
-	maxInsertions := ItemCount - n.Occupancy()
+	maxInsertions := n.TotalEmpty()
 	debugPrintln(n)
 	remainder := t.balancer.Balance(n, v)
 	debugPrintln(n)
@@ -54,7 +54,7 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 		return
 	}
 	childrenRanges := n.Ranges()
-	for i := 0; i < ChildCount; i++ {
+	for i := 0; i < n.MaxChildren(); i++ {
 		childStart, childEnd := childrenRanges[i], childrenRanges[i+1]
 		if childStart.Empty() || childEnd.Empty() {
 			continue
@@ -64,8 +64,9 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 			continue
 		}
 		var child *Node
-		if id := n.Children[i]; id == EmptyChild {
-			if child, err = t.keys.New(childStart, childEnd); err != nil {
+		id := n.Children[i]
+		if id == EmptyChild {
+			if child, err = t.keys.New(childStart, childEnd, t.Degree); err != nil {
 				return
 			}
 			n.Children[i] = child.Id
@@ -95,7 +96,7 @@ func (t *Tree) Add(values KeySlice) (int, error) {
 	return t.add(t.root, values)
 }
 
-func (t *Tree) each(level int, n *Node, f nodeFunc) error {
+func (t *Tree) each(level int, n *Node, f NodeFunc) error {
 	if err := f(level, n); err != nil {
 		return err
 	}
@@ -114,7 +115,7 @@ func (t *Tree) each(level int, n *Node, f nodeFunc) error {
 	return nil
 }
 
-func (t *Tree) Each(f nodeFunc) error {
+func (t *Tree) Each(f NodeFunc) error {
 	return t.each(0, t.root, f)
 }
 
@@ -128,16 +129,4 @@ func (t *Tree) Dump(w io.Writer) error {
 		}
 		return nil
 	})
-}
-
-func (t *Tree) Levels() (LevelSlice, error) {
-	var levels LevelSlice
-	err := t.Each(func(level int, n *Node) error {
-		levels.Add(n, level)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return levels, nil
 }

@@ -17,12 +17,9 @@ func NewMemoryKeyStore() KeyStore {
 	}
 }
 
-func (m *MemoryKeyStore) New(start, end Hash) (*Node, error) {
-	node := &Node{
-		Id:    uint64(len(m.cache)),
-		Start: start,
-		End:   end,
-	}
+func (m *MemoryKeyStore) New(start, end Hash, degree uint64) (*Node, error) {
+	id := uint64(len(m.cache))
+	node := NewNode(start, end, id, degree)
 	m.cache[node.Id] = node
 	return node, nil
 }

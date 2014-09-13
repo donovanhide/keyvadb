@@ -38,13 +38,13 @@ func (e EmptyRange) Len() int {
 func EmptyRanges(n *Node) []EmptyRange {
 	var empties []EmptyRange
 	r := n.Ranges()
-	for i := 0; i < ItemCount; i++ {
+	for i := 0; i < n.MaxEntries(); i++ {
 		if n.Keys[i].Empty() {
 			empty := EmptyRange{
 				Start:      r[i],
 				StartIndex: i,
 			}
-			for ; i < ItemCount && n.Keys[i].Empty(); i++ {
+			for ; i < n.MaxEntries() && n.Keys[i].Empty(); i++ {
 			}
 			empty.End = r[i+1]
 			empty.EndIndex = i
@@ -87,7 +87,7 @@ func (b *RandomBalancer) Balance(n *Node, s KeySlice) KeySlice {
 func (b *BufferBalancer) Balance(n *Node, s KeySlice) KeySlice {
 	occupied := n.Occupancy()
 	switch {
-	case occupied+len(s) <= ItemCount:
+	case occupied+len(s) <= n.MaxEntries():
 		// No children yet
 		// Add items at the start and sort node
 		for i, key := range s {
@@ -95,11 +95,11 @@ func (b *BufferBalancer) Balance(n *Node, s KeySlice) KeySlice {
 		}
 		n.SortByKey()
 		return nil
-	case occupied < ItemCount:
+	case occupied < n.MaxEntries():
 		// Merge random
 		remainder := s.Clone()
 		r := rand.New(rand.NewSource(int64(n.Id)))
-		picks := r.Perm(len(s))[:ItemCount-occupied]
+		picks := r.Perm(len(s))[:n.MaxEntries()-occupied]
 		sort.Ints(picks)
 		for i, pick := range picks {
 			n.UpdateEntry(i, s[pick])
@@ -118,35 +118,31 @@ type DistanceSorter struct {
 	KeySlice
 	Start, End         *big.Int
 	Stride, HalfStride *big.Int
+	Entries            int64
 }
 
-func NewDistanceSorter(s KeySlice, start, end Hash) *DistanceSorter {
-	stride := start.Stride(end, ItemCount)
+func NewDistanceSorter(s KeySlice, start, end Hash, entries int64) *DistanceSorter {
+	stride := start.Stride(end, entries)
 	return &DistanceSorter{
 		KeySlice:   s,
 		Start:      start.Big(),
 		End:        end.Big(),
 		Stride:     stride.Big(),
 		HalfStride: stride.Divide(2).Big(),
+		Entries:    entries,
 	}
 }
 
 func (d *DistanceSorter) Less(i, j int) bool {
-	_, ld := d.KeySlice[i].Key.NearestStride(d.Start, d.Stride, d.HalfStride)
-	_, rd := d.KeySlice[j].Key.NearestStride(d.Start, d.Stride, d.HalfStride)
+	_, ld := d.KeySlice[i].Key.NearestStride(d.Start, d.Stride, d.HalfStride, d.Entries)
+	_, rd := d.KeySlice[j].Key.NearestStride(d.Start, d.Stride, d.HalfStride, d.Entries)
 	return ld.Less(rd)
-	// li, ld := d.KeySlice[i].Key.NearestStride(d.Start, d.Stride, d.HalfStride)
-	// ri, rd := d.KeySlice[j].Key.NearestStride(d.Start, d.Stride, d.HalfStride)
-	// if li == ri {
-	// 	return ld.Less(rd)
-	// }
-	// return li < ri
 }
 
 func (b *DistanceBalancer) Balance(n *Node, s KeySlice) KeySlice {
 	occupied := n.Occupancy()
 	switch {
-	case occupied+len(s) <= ItemCount:
+	case occupied+len(s) <= n.MaxEntries():
 		// No children yet
 		// Add items at the start and sort node
 		for i, key := range s {
@@ -154,22 +150,22 @@ func (b *DistanceBalancer) Balance(n *Node, s KeySlice) KeySlice {
 		}
 		n.SortByKey()
 		return nil
-	case occupied < ItemCount:
+	case occupied < n.MaxEntries():
 		// Merge and place in order
 		candidates := append(s.Clone(), n.NonEmptyKeys()...)
 		n.AddSyntheticKeys()
-		dist := NewDistanceSorter(candidates, n.Start, n.End)
+		dist := NewDistanceSorter(candidates, n.Start, n.End, int64(n.MaxEntries()))
 		sort.Sort(dist)
 		used := make(map[int]Key)
 		for _, candidate := range dist.KeySlice {
 			// Use distance to make calculation
 			// index, distance := candidate.Key.NearestStride(dist.Start, dist.Stride, dist.HalfStride)
-			index, _ := candidate.Key.NearestStride(dist.Start, dist.Stride, dist.HalfStride)
+			index, _ := candidate.Key.NearestStride(dist.Start, dist.Stride, dist.HalfStride, int64(n.MaxEntries()))
 			if _, ok := used[index]; !ok {
 				used[index] = candidate
 				n.UpdateEntry(index-1, candidate)
 			}
-			if len(used) == ItemCount {
+			if len(used) == n.MaxEntries() {
 				break
 			}
 		}

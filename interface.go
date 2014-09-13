@@ -7,7 +7,7 @@ import (
 var ErrNotFound = errors.New("key not found")
 
 type KeyStore interface {
-	New(start, end Hash) (*Node, error)
+	New(start, end Hash, degree uint64) (*Node, error)
 	Set(*Node) error
 	Get(id uint64) (*Node, error)
 }

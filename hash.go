@@ -103,7 +103,7 @@ func (a Hash) Multiply(n int64) Hash {
 
 // Returns multiple of stride and distance.
 // Rounds up and down if the extents are matched
-func (a Hash) NearestStride(start, stride, halfStride *big.Int) (int, Hash) {
+func (a Hash) NearestStride(start, stride, halfStride *big.Int, entries int64) (int, Hash) {
 	quot := a.Big()
 	rem := big.NewInt(0)
 	quot.Sub(quot, start).QuoRem(quot, stride, rem)
@@ -114,7 +114,7 @@ func (a Hash) NearestStride(start, stride, halfStride *big.Int) (int, Hash) {
 		// Shift up
 		i++
 		rem.Sub(a.Big(), stride).Sub(rem, start)
-	case i < ItemCount && rem.Cmp(halfStride) > 0:
+	case i < entries && rem.Cmp(halfStride) > 0:
 		// Round up
 		i++
 		rem.Sub(stride, rem)

@@ -6,14 +6,24 @@ import (
 	"strings"
 )
 
-type nodeFunc func(int, *Node) error
+type NodeFunc func(int, *Node) error
 
 type Node struct {
 	Id       uint64
 	Start    Hash
 	End      Hash
-	Keys     [ItemCount]Key
-	Children [ChildCount]uint64
+	Keys     []Key
+	Children []uint64
+}
+
+func NewNode(start, end Hash, id, degree uint64) *Node {
+	return &Node{
+		Id:       id,
+		Start:    start,
+		End:      end,
+		Keys:     make(KeySlice, int(degree-1)),
+		Children: make([]uint64, int(degree)),
+	}
 }
 
 func (n *Node) Empty(i int) bool {
@@ -73,6 +83,16 @@ func (n *Node) Occupancy() int {
 	return count
 }
 
+func (n *Node) TotalEmpty() int {
+	count := 0
+	for _, key := range n.Keys {
+		if key.Empty() {
+			count++
+		}
+	}
+	return count
+}
+
 func (n *Node) NonEmptyKeys() KeySlice {
 	var keys KeySlice
 	for _, key := range n.Keys {
@@ -96,7 +116,15 @@ func (n *Node) SanityCheck() bool {
 }
 
 func (n *Node) Stride() Hash {
-	return n.Start.Stride(n.End, ItemCount+1)
+	return n.Start.Stride(n.End, int64(len(n.Children)))
+}
+
+func (n *Node) MaxEntries() int {
+	return len(n.Keys)
+}
+
+func (n *Node) MaxChildren() int {
+	return len(n.Children)
 }
 
 func (n *Node) Distance() Hash {
@@ -120,7 +148,7 @@ type nodeByKey struct {
 
 func (n nodeByKey) Less(i, j int) bool { return n.Keys[i].Less(n.Keys[j]) }
 
-func (n *Node) Len() int { return ItemCount }
+func (n *Node) Len() int { return len(n.Keys) }
 func (n *Node) Swap(i, j int) {
 	if n.HasChild(i) || n.HasChild(j) {
 		panic(fmt.Sprintf("Cannot swap:\n%s", n))
