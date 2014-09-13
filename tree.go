@@ -15,6 +15,9 @@ type Tree struct {
 }
 
 func NewTree(degree uint64, keys KeyStore, values ValueStore, balancer Balancer) (*Tree, error) {
+	if degree < 2 {
+		return nil, fmt.Errorf("degree must be 2 or above")
+	}
 	root, err := keys.Get(0)
 	switch {
 	case err == ErrNotFound:

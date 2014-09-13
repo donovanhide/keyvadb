@@ -69,10 +69,16 @@ func (sum Summary) MaxNodes(depth int) uint64 {
 	return uint64(math.Pow(float64(sum.Degree), float64(depth)))
 }
 
+func (sum Summary) AverageEntries() float64 {
+	return float64(sum.Total.NonSyntheticEntries()) / float64(sum.Total.Nodes)
+}
+
+func (sum Summary) Efficiency() float64 {
+	return sum.AverageEntries() / float64(sum.Degree)
+}
+
 func (sum Summary) Overall() string {
-	averageEntries := float64(sum.Total.NonSyntheticEntries()) / float64(sum.Total.Nodes)
-	efficency := averageEntries / float64(sum.Degree) * 100
-	return fmt.Sprintf("Total:\t\t%s\tReal Entries/Node: %6.2f\t Efficiency: %6.2f%%", sum.Total, averageEntries, efficency)
+	return fmt.Sprintf("Total:\t\t%s\tReal Entries/Node: %6.2f\t Efficiency: %6.2f%%", sum.Total, sum.AverageEntries(), sum.Efficiency()*100)
 }
 
 func (sum Summary) String() string {
