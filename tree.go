@@ -47,41 +47,32 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 	if insertions > maxInsertions {
 		panic(fmt.Sprintf("too many insertions: %d max: %d", insertions, maxInsertions))
 	}
-	if !n.SanityCheck() {
+	if *debug && !n.SanityCheck() {
 		panic(fmt.Sprintf("not sane:\n%s", n))
 	}
 	if insertions == len(v) {
 		return
 	}
-	childrenRanges := n.Ranges()
-	for i := 0; i < n.MaxChildren(); i++ {
-		childStart, childEnd := childrenRanges[i], childrenRanges[i+1]
-		if childStart.Empty() || childEnd.Empty() {
-			continue
-		}
-		candidates := remainder.GetRange(childStart, childEnd)
+	err = n.Each(func(id uint64, start, end Hash) (uint64, error) {
+		candidates := remainder.GetRange(start, end)
 		if len(candidates) == 0 {
-			continue
+			return id, nil
 		}
 		var child *Node
-		id := n.Children[i]
 		if id == EmptyChild {
-			if child, err = t.keys.New(childStart, childEnd, t.Degree); err != nil {
-				return
+			if child, err = t.keys.New(start, end, t.Degree); err != nil {
+				return id, nil
 			}
-			n.Children[i] = child.Id
+			id = child.Id
 		} else {
 			if child, err = t.keys.Get(id); err != nil {
-				return
+				return id, err
 			}
 		}
-		var childInsertions int
-		childInsertions, err = t.add(child, candidates)
+		childInsertions, err := t.add(child, candidates)
 		insertions += childInsertions
-		if err != nil {
-			return
-		}
-	}
+		return id, err
+	})
 	if len(v) != insertions {
 		panic(fmt.Sprintf("Wrong number of insertions: Expected:%d Got:%d\n", len(v), insertions))
 	}
@@ -100,19 +91,16 @@ func (t *Tree) each(level int, n *Node, f NodeFunc) error {
 	if err := f(level, n); err != nil {
 		return err
 	}
-	for _, cid := range n.Children {
-		if cid == EmptyChild {
-			continue
+	return n.Each(func(id uint64, start, end Hash) (uint64, error) {
+		if id == EmptyChild {
+			return id, nil
 		}
-		child, err := t.keys.Get(cid)
+		child, err := t.keys.Get(id)
 		if err != nil {
-			return err
+			return id, err
 		}
-		if err := t.each(level+1, child, f); err != nil {
-			return err
-		}
-	}
-	return nil
+		return id, t.each(level+1, child, f)
+	})
 }
 
 func (t *Tree) Each(f NodeFunc) error {

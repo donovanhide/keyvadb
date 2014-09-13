@@ -7,6 +7,7 @@ import (
 )
 
 type NodeFunc func(int, *Node) error
+type ChildFunc func(uint64, Hash, Hash) (uint64, error)
 
 type Node struct {
 	Id       uint64
@@ -119,6 +120,10 @@ func (n *Node) Stride() Hash {
 	return n.Start.Stride(n.End, int64(len(n.Children)))
 }
 
+func (n *Node) Distance() Hash {
+	return n.Start.Distance(n.End)
+}
+
 func (n *Node) MaxEntries() int {
 	return len(n.Keys)
 }
@@ -127,8 +132,27 @@ func (n *Node) MaxChildren() int {
 	return len(n.Children)
 }
 
-func (n *Node) Distance() Hash {
-	return n.Start.Distance(n.End)
+func (n *Node) update(f ChildFunc, i int, start, end Hash) error {
+	if !start.Empty() && !end.Empty() {
+		id, err := f(n.Children[i], start, end)
+		if err != nil {
+			return err
+		}
+		n.Children[i] = id
+	}
+	return nil
+}
+
+func (n *Node) Each(f ChildFunc) error {
+	if err := n.update(f, 0, n.Start, n.Keys[0].Key); err != nil {
+		return err
+	}
+	for i := range n.Keys[:len(n.Keys)-1] {
+		if err := n.update(f, i+1, n.Keys[i].Key, n.Keys[i+1].Key); err != nil {
+			return err
+		}
+	}
+	return n.update(f, len(n.Keys), n.Keys[len(n.Keys)-1].Key, n.End)
 }
 
 func (n *Node) String() string {

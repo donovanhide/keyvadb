@@ -17,10 +17,12 @@ import (
 	"code.google.com/p/plotinum/plotutil"
 )
 
-var num = flag.Int("num", 1000, "number of values to insert in one batch")
+var num = flag.Int("num", 10000, "number of values to insert in one batch")
 var rounds = flag.Int("rounds", 100, "number of batches")
 var degree = flag.Uint64("degree", 9, "number of children per node")
 var seed = flag.Int64("seed", 0, "seed for RNG")
+var profile = flag.Bool("profile", false, "enable profiling")
+var sample = flag.Int("sample", 1, "sampling rate: (round%sample==0)")
 
 type levelData map[string][]*keyvadb.Summary
 
@@ -32,10 +34,12 @@ func checkErr(err error) {
 
 func main() {
 	flag.Parse()
+	if *profile {
+		f, err := os.Create("cpu.out")
+		checkErr(err)
+		pprof.StartCPUProfile(f)
+	}
 	data := make(levelData)
-	f, err := os.Create("cpu.out")
-	checkErr(err)
-	pprof.StartCPUProfile(f)
 	for _, balancer := range keyvadb.Balancers {
 		ms := keyvadb.NewMemoryKeyStore()
 		mv := keyvadb.NewMemoryValueStore()
@@ -53,12 +57,16 @@ func main() {
 			checkErr(err)
 			sum += n
 			log.Printf("Added %d keys using the %s balancer", sum, balancer.Name)
-			summary, err := keyvadb.NewSummary(tree)
-			checkErr(err)
-			data[balancer.Name] = append(data[balancer.Name], summary)
+			if i%*sample == 0 {
+				summary, err := keyvadb.NewSummary(tree)
+				checkErr(err)
+				data[balancer.Name] = append(data[balancer.Name], summary)
+			}
 		}
 	}
-	pprof.StopCPUProfile()
+	if *profile {
+		pprof.StopCPUProfile()
+	}
 	checkErr(save(entriesPlot(data)))
 	checkErr(save(distributionPlot(data)))
 }
@@ -71,9 +79,10 @@ func entriesPlot(data levelData) (*plot.Plot, string) {
 	var pts []interface{}
 	for name, summaries := range data {
 		points := make(plotter.XYs, len(summaries))
-		for round, sum := range summaries {
-			points[round].X = float64(round)
-			points[round].Y = float64(sum.Total.Entries-sum.Total.Synthetics) / float64(sum.Total.Nodes)
+		for i, sum := range summaries {
+			round := i * (*sample)
+			points[i].X = float64(round)
+			points[i].Y = float64(sum.Total.Entries-sum.Total.Synthetics) / float64(sum.Total.Nodes)
 		}
 		pts = append(pts, []interface{}{name, points}...)
 	}

@@ -48,15 +48,15 @@ func newHash(n *big.Int) Hash {
 }
 
 func (h Hash) Empty() bool {
-	return h.Equals(EmptyKey)
+	return h == EmptyKey
+}
+
+func (a Hash) Equals(b Hash) bool {
+	return a == b
 }
 
 func (a Hash) Compare(b Hash) int {
 	return bytes.Compare(a[:], b[:])
-}
-
-func (a Hash) Equals(b Hash) bool {
-	return a.Compare(b) == 0
 }
 
 func (a Hash) Less(b Hash) bool {
