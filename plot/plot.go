@@ -17,7 +17,7 @@ import (
 
 var num = flag.Int("num", 1000, "number of values to insert in one batch")
 var rounds = flag.Int("rounds", 100, "number of batches")
-var entries = flag.Uint64("entries", 8, "number of entries per tree node")
+var degree = flag.Uint64("degree", 9, "number of children per node")
 var seed = flag.Int64("seed", 0, "seed for RNG")
 
 type levelData map[string][]*keyvadb.Summary
@@ -36,7 +36,7 @@ func main() {
 		mv := keyvadb.NewMemoryValueStore()
 		r := randbo.NewFrom(rand.NewSource(*seed))
 		gen := keyvadb.NewRandomValueGenerator(10, 50, r)
-		tree, err := keyvadb.NewTree(*entries, ms, mv, balancer.Balancer)
+		tree, err := keyvadb.NewTree(*degree, ms, mv, balancer.Balancer)
 		checkErr(err)
 		sum := 0
 		for i := 0; i < *rounds; i++ {
@@ -95,7 +95,7 @@ func distributionPlot(data levelData) (*plot.Plot, string) {
 }
 
 func save(p *plot.Plot, title string) error {
-	description := fmt.Sprintf("%s: %d rounds of %d keys inserted in a tree with %d entries per node", title, *rounds, *num, *entries)
+	description := fmt.Sprintf("%s: %d rounds of %d keys inserted in a tree with %d children per node", title, *rounds, *num, *degree)
 	p.Title.Text = description
 	filename := strings.Replace(strings.ToLower(title), " ", "_", -1) + ".svg"
 	return p.Save(10, 6, filename)
