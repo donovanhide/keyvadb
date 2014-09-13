@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
+	"runtime/pprof"
 	"strings"
 
 	"github.com/donovanhide/keyvadb"
@@ -31,6 +33,9 @@ func checkErr(err error) {
 func main() {
 	flag.Parse()
 	data := make(levelData)
+	f, err := os.Create("cpu.out")
+	checkErr(err)
+	pprof.StartCPUProfile(f)
 	for _, balancer := range keyvadb.Balancers {
 		ms := keyvadb.NewMemoryKeyStore()
 		mv := keyvadb.NewMemoryValueStore()
@@ -53,6 +58,7 @@ func main() {
 			data[balancer.Name] = append(data[balancer.Name], summary)
 		}
 	}
+	pprof.StopCPUProfile()
 	checkErr(save(entriesPlot(data)))
 	checkErr(save(distributionPlot(data)))
 }

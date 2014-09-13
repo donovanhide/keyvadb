@@ -1,11 +1,22 @@
 package keyvadb
 
 import (
+	crand "crypto/rand"
 	"crypto/sha512"
 	"encoding/binary"
 	"io"
+	"math/rand"
 	"sync/atomic"
 )
+
+// PRNG seeded by CRNG
+func MustRand() *rand.Rand {
+	var seed int64
+	if err := binary.Read(crand.Reader, binary.BigEndian, &seed); err != nil {
+		panic(err)
+	}
+	return rand.New(rand.NewSource(seed))
+}
 
 type RandomValueGenerator struct {
 	r        io.Reader

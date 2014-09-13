@@ -3,9 +3,10 @@ package keyvadb
 import (
 	"fmt"
 	"math/big"
-	"math/rand"
 	"sort"
 )
+
+var balancerRandom = MustRand()
 
 var Balancers = []struct {
 	Name     string
@@ -55,7 +56,6 @@ func EmptyRanges(n *Node) []EmptyRange {
 }
 
 func (b *RandomBalancer) Balance(n *Node, s KeySlice) KeySlice {
-	r := rand.New(rand.NewSource(int64(n.Id)))
 	remainder := s.Clone()
 	for _, empty := range EmptyRanges(n) {
 		sub := s.GetRange(empty.Start, empty.End)
@@ -65,7 +65,7 @@ func (b *RandomBalancer) Balance(n *Node, s KeySlice) KeySlice {
 			continue
 		case empty.Len() <= len(sub):
 			//Pick random
-			picks := r.Perm(len(sub))[:empty.Len()]
+			picks := balancerRandom.Perm(len(sub))[:empty.Len()]
 			sort.Ints(picks)
 			for i, pick := range picks {
 				n.UpdateEntry(empty.StartIndex+i, sub[pick])
@@ -73,7 +73,7 @@ func (b *RandomBalancer) Balance(n *Node, s KeySlice) KeySlice {
 			}
 		default:
 			//Place random
-			locations := r.Perm(empty.Len())[:len(sub)]
+			locations := balancerRandom.Perm(empty.Len())[:len(sub)]
 			sort.Ints(locations)
 			for i, location := range locations {
 				n.UpdateEntry(empty.StartIndex+location, sub[i])
@@ -98,8 +98,7 @@ func (b *BufferBalancer) Balance(n *Node, s KeySlice) KeySlice {
 	case occupied < n.MaxEntries():
 		// Merge random
 		remainder := s.Clone()
-		r := rand.New(rand.NewSource(int64(n.Id)))
-		picks := r.Perm(len(s))[:n.MaxEntries()-occupied]
+		picks := balancerRandom.Perm(len(s))[:n.MaxEntries()-occupied]
 		sort.Ints(picks)
 		for i, pick := range picks {
 			n.UpdateEntry(i, s[pick])

@@ -19,7 +19,7 @@ func NewTree(degree uint64, keys KeyStore, values ValueStore, balancer Balancer)
 	switch {
 	case err == ErrNotFound:
 		root = NewNode(FirstHash, LastHash, 0, degree)
-		root.AddSyntheticKeys()
+		// root.AddSyntheticKeys()
 	case err != nil:
 		return nil, err
 	}
