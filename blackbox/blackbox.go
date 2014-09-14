@@ -13,9 +13,12 @@ import (
 )
 
 var seed = flag.Int64("seed", 0, "seed for RNG")
-var iterations = flag.Int("iterations", 10000, "number of iterations")
-var num = flag.Int("num", 1000, "number of insertions")
-var maxDegree = flag.Int("max_degree", 64, "max degree of tree")
+var iterations = flag.Int("iterations", 1000, "number of iterations")
+var num = flag.Int("num", 10000, "number of insertions")
+var minDegree = flag.Int("min_degree", 2, "minimum degree of tree")
+var maxDegree = flag.Int("max_degree", 1024, "maximum degree of tree")
+var minBatch = flag.Int("min_batch", 10, "minimum batch size")
+var maxBatch = flag.Int("max_batch", 100, "minimum batch size")
 
 func checkErr(err error) {
 	if err != nil {
@@ -34,8 +37,8 @@ func main() {
 	flag.Parse()
 	data := make(map[string][]Point)
 	for i := 0; i < *iterations; i++ {
-		degree := uint64(rand.Intn(*maxDegree-2) + 2)
-		batch := rand.Intn(int(*num)/10) + 1
+		degree := uint64(rand.Intn(*maxDegree-*minDegree) + *minDegree)
+		batch := min(rand.Intn(*maxBatch-*minBatch)+*minBatch, *num)
 		for _, balancer := range keyvadb.Balancers {
 			ms := keyvadb.NewMemoryKeyStore()
 			mv := keyvadb.NewMemoryValueStore()
@@ -66,8 +69,8 @@ func main() {
 		checkErr(err)
 		p.X.Label.Text = "Degree"
 		p.Y.Label.Text = "Batch"
-		p.Title.Text = "Effiency of Batch and Degree"
-		p.Add(&EfficiencyScatter{Degree: uint64(*maxDegree), Batch: uint64(*num / 10), Points: points})
+		p.Title.Text = "Efficiency of Batch and Degree"
+		p.Add(&EfficiencyScatter{Points: points})
 		checkErr(p.Save(8, 6, name+".svg"))
 	}
 }
