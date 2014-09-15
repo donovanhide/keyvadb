@@ -30,11 +30,13 @@ func (s *KeyVaSuite) TestTree(c *C) {
 			sum += n
 			c.Assert(summary.Total.NonSyntheticEntries(), Equals, uint64(sum), msg)
 		}
+		// Check all keys were added
 		for _, key := range allKeys {
 			found, err := tree.Get(key.Hash)
 			c.Assert(err, IsNil)
 			c.Assert(found.Equals(key), Equals, true)
 		}
+		// Check all keys can be walked in order
 		i := 0
 		allKeys.Sort()
 		err = tree.Walk(FirstHash, LastHash, func(key *Key) {
@@ -44,6 +46,7 @@ func (s *KeyVaSuite) TestTree(c *C) {
 		})
 		c.Assert(err, IsNil)
 		c.Assert(i, Equals, len(allKeys))
+		// Check subset of keys are walked in order
 		j := 100
 		start, end := allKeys[j].Hash, allKeys[len(allKeys)-100].Hash
 		err = tree.Walk(start, end, func(key *Key) {
