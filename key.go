@@ -11,8 +11,6 @@ type Key struct {
 	Id  uint64
 }
 
-type KeySlice []Key
-
 func (k Key) String() string {
 	return fmt.Sprintf("%s:%d", k.Key, k.Id)
 }
@@ -24,6 +22,8 @@ func (k Key) Empty() bool {
 func (a Key) Less(b Key) bool {
 	return a.Key.Less(b.Key)
 }
+
+type KeySlice []Key
 
 func (s KeySlice) Len() int           { return len(s) }
 func (s KeySlice) Less(i, j int) bool { return s[i].Less(s[j]) }
