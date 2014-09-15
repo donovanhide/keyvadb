@@ -1,6 +1,9 @@
 package keyvadb
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+)
 
 var balancerRandom = MustRand()
 
@@ -10,6 +13,15 @@ var Balancers = []struct {
 }{
 	{"Buffer", &BufferBalancer{}},
 	{"Distance", &DistanceBalancer{}},
+}
+
+func newBalancer(name string) (Balancer, error) {
+	for _, balancer := range Balancers {
+		if balancer.Name == name {
+			return balancer.Balancer, nil
+		}
+	}
+	return nil, fmt.Errorf("unknown balancer: %s", name)
 }
 
 type BufferBalancer struct{}
