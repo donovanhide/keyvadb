@@ -1,6 +1,6 @@
 package keyvadb
 
-type NodeCache map[uint64]*Node
+type NodeCache map[NodeId]*Node
 type KeyValueCache []*KeyValue
 
 type MemoryKeyStore struct {
@@ -18,7 +18,7 @@ func NewMemoryKeyStore() KeyStore {
 }
 
 func (m *MemoryKeyStore) New(start, end Hash, degree uint64) (*Node, error) {
-	id := uint64(len(m.cache))
+	id := NodeId(len(m.cache))
 	node := NewNode(start, end, id, degree)
 	m.cache[node.Id] = node
 	return node, nil
@@ -29,7 +29,7 @@ func (m *MemoryKeyStore) Set(node *Node) error {
 	return nil
 }
 
-func (m *MemoryKeyStore) Get(id uint64) (*Node, error) {
+func (m *MemoryKeyStore) Get(id NodeId) (*Node, error) {
 	if node, ok := m.cache[id]; ok {
 		return node, nil
 	}
@@ -40,13 +40,13 @@ func NewMemoryValueStore() ValueStore {
 	return &MemoryValueStore{}
 }
 
-func (m *MemoryValueStore) Append(v *KeyValue) (uint64, error) {
-	id := uint64(len(m.cache))
+func (m *MemoryValueStore) Append(v *KeyValue) (ValueId, error) {
+	id := ValueId(len(m.cache))
 	m.cache = append(m.cache, v)
 	return id, nil
 }
 
-func (m *MemoryValueStore) Get(id uint64) (*KeyValue, error) {
+func (m *MemoryValueStore) Get(id ValueId) (*KeyValue, error) {
 	if int(id) >= len(m.cache) {
 		return nil, ErrNotFound
 	}

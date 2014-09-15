@@ -8,8 +8,8 @@ import (
 
 const (
 	HashSize       = 32
-	EmptyChild     = uint64(0)
-	SyntheticChild = math.MaxUint64
+	EmptyChild     = NodeId(0)
+	SyntheticValue = ValueId(math.MaxUint64)
 )
 
 var (

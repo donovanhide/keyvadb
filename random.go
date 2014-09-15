@@ -41,7 +41,7 @@ func (r *RandomValueGenerator) Next() (*KeyValue, error) {
 	length = (length % (r.max - r.min)) + r.min
 	kv := &KeyValue{
 		Key: Key{
-			Id: atomic.AddUint64(&r.count, 1),
+			Id: ValueId(atomic.AddUint64(&r.count, 1)),
 		},
 		Value: make([]byte, length),
 	}

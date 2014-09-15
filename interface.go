@@ -9,12 +9,12 @@ var ErrNotFound = errors.New("key not found")
 type KeyStore interface {
 	New(start, end Hash, degree uint64) (*Node, error)
 	Set(*Node) error
-	Get(id uint64) (*Node, error)
+	Get(id NodeId) (*Node, error)
 }
 
 type ValueStore interface {
-	Append(*KeyValue) (uint64, error)
-	Get(id uint64) (*KeyValue, error)
+	Append(*KeyValue) (ValueId, error)
+	Get(id ValueId) (*KeyValue, error)
 	Each(func(int, *KeyValue) error) error
 }
 

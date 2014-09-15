@@ -5,9 +5,15 @@ import (
 	"sort"
 )
 
+type ValueId uint64
+
+func (id ValueId) Synthetic() bool {
+	return id == SyntheticValue
+}
+
 type Key struct {
 	Hash Hash
-	Id   uint64
+	Id   ValueId
 }
 
 func (k Key) String() string {

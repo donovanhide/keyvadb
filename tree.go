@@ -57,7 +57,7 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 	if insertions == len(v) {
 		return
 	}
-	err = n.Each(func(id uint64, start, end Hash) (uint64, error) {
+	err = n.Each(func(id NodeId, start, end Hash) (NodeId, error) {
 		candidates := remainder.GetRange(start, end)
 		if len(candidates) == 0 {
 			return id, nil
@@ -130,7 +130,7 @@ func (t *Tree) walk(n *Node, start, end Hash, f WalkFunc) error {
 		if end.Compare(key.Hash) < 0 {
 			return finishedWalkErr
 		}
-		if i < n.MaxEntries() && start.Compare(key.Hash) <= 0 && key.Id != SyntheticChild {
+		if i < n.MaxEntries() && start.Compare(key.Hash) <= 0 && !key.Id.Synthetic() {
 			f(key.Clone())
 		}
 	}
@@ -149,8 +149,8 @@ func (t *Tree) each(level int, n *Node, f NodeFunc) error {
 	if err := f(level, n); err != nil {
 		return err
 	}
-	return n.Each(func(id uint64, start, end Hash) (uint64, error) {
-		if id == EmptyChild {
+	return n.Each(func(id NodeId, start, end Hash) (NodeId, error) {
+		if id.Empty() {
 			return id, nil
 		}
 		child, err := t.keys.Get(id)
@@ -161,6 +161,7 @@ func (t *Tree) each(level int, n *Node, f NodeFunc) error {
 	})
 }
 
+// Visit each node
 func (t *Tree) Each(f NodeFunc) error {
 	return t.each(0, t.root, f)
 }

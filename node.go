@@ -6,31 +6,37 @@ import (
 	"strings"
 )
 
+type NodeId uint64
+
 type NodeFunc func(int, *Node) error
-type ChildFunc func(uint64, Hash, Hash) (uint64, error)
+type ChildFunc func(NodeId, Hash, Hash) (NodeId, error)
+
+func (id NodeId) Empty() bool {
+	return id == EmptyChild
+}
 
 type Node struct {
-	Id       uint64
+	Id       NodeId
 	Start    Hash
 	End      Hash
 	Keys     KeySlice
-	Children []uint64
+	Children []NodeId
 }
 
-func NewNode(start, end Hash, id, degree uint64) *Node {
+func NewNode(start, end Hash, id NodeId, degree uint64) *Node {
 	return &Node{
 		Id:       id,
 		Start:    start,
 		End:      end,
 		Keys:     make(KeySlice, int(degree-1)),
-		Children: make([]uint64, int(degree)),
+		Children: make([]NodeId, int(degree)),
 	}
 }
 
-func (n *Node) GetKeyOrChild(hash Hash) (*Key, uint64, error) {
+func (n *Node) GetKeyOrChild(hash Hash) (*Key, NodeId, error) {
 	i := n.Keys.find(hash)
 	if i == len(n.Keys) {
-		if lastChild := n.Children[len(n.Children)-1]; lastChild != EmptyChild {
+		if lastChild := n.Children[len(n.Children)-1]; !lastChild.Empty() {
 			return nil, lastChild, nil
 		}
 		return nil, EmptyChild, ErrNotFound
@@ -39,9 +45,9 @@ func (n *Node) GetKeyOrChild(hash Hash) (*Key, uint64, error) {
 	switch {
 	case cmp == 0:
 		return n.Keys[i].Clone(), EmptyChild, nil
-	case cmp == 1 && n.Children[i] != EmptyChild:
+	case cmp == 1 && !n.Children[i].Empty():
 		return nil, n.Children[i], nil
-	case cmp == -1 && n.Children[i+1] != EmptyChild:
+	case cmp == -1 && n.Children[i+1].Empty():
 		return nil, n.Children[i+1], nil
 	default:
 		return nil, EmptyChild, ErrNotFound
@@ -53,7 +59,7 @@ func (n *Node) Empty(i int) bool {
 }
 
 func (n *Node) HasChild(i int) bool {
-	return n.Children[i] != EmptyChild || n.Children[i+1] != EmptyChild
+	return !n.Children[i].Empty() && !n.Children[i+1].Empty()
 }
 
 func (n *Node) UpdateEntry(i int, key Key) {
@@ -69,7 +75,7 @@ func (n *Node) AddSyntheticKeys() {
 	for i := range n.Keys {
 		n.UpdateEntry(i, Key{
 			Hash: cursor,
-			Id:   SyntheticChild,
+			Id:   SyntheticValue,
 		})
 		cursor = cursor.Add(stride)
 	}
@@ -78,7 +84,7 @@ func (n *Node) AddSyntheticKeys() {
 func (n *Node) Synthetics() int {
 	count := 0
 	for _, key := range n.Keys {
-		if key.Id == SyntheticChild {
+		if key.Id.Synthetic() {
 			count++
 		}
 	}
