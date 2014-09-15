@@ -25,7 +25,7 @@ func MustHash(s string) Hash {
 	switch {
 	case err != nil:
 		panic(err)
-	case len(b) != 32:
+	case len(b) != HashSize:
 		panic("Hash wrong length")
 	default:
 		var hash Hash
