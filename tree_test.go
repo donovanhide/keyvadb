@@ -35,5 +35,14 @@ func (s *KeyVaSuite) TestTree(c *C) {
 			c.Assert(err, IsNil)
 			c.Assert(found.Equals(key), Equals, true)
 		}
+		i := 0
+		allKeys.Sort()
+		tree.Walk(FirstHash, LastHash, func(key *Key) bool {
+			c.Log(key, allKeys[i])
+			c.Assert(key.Equals(allKeys[i]), Equals, true)
+			i++
+			return true
+		})
+		c.Assert(i, Equals, len(allKeys))
 	}
 }

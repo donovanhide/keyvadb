@@ -193,5 +193,5 @@ func (n *Node) Swap(i, j int) {
 	}
 	n.Keys[i], n.Keys[j] = n.Keys[j], n.Keys[i]
 }
-func (n *Node) Sort()     { sort.Sort(n) }
-func (n *Node) IsSorted() { sort.IsSorted(n) }
+func (n *Node) Sort()          { sort.Sort(n) }
+func (n *Node) IsSorted() bool { return sort.IsSorted(n) }
