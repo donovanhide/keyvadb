@@ -8,7 +8,7 @@ func (s *KeyVaSuite) TestTree(c *C) {
 		vs := NewMemoryValueStore()
 		msg := Commentf(b.Name)
 		var allKeys KeySlice
-		tree, err := NewTree(9, ks, vs, b.Balancer)
+		tree, err := NewTree(8, ks, vs, b.Balancer)
 		c.Assert(err, IsNil, msg)
 		n := 1000
 		rounds := 10

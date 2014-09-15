@@ -185,20 +185,13 @@ func (n *Node) String() string {
 	return fmt.Sprintf(format, n.Id, n.SanityCheck(), n.Occupancy(), n.ChildCount(), n.Start, n.End, n.Distance(), n.Stride(), strings.Join(items, "\n"))
 }
 
-// sorting helpers
-
-type nodeByKey struct {
-	*Node
-}
-
-func (n nodeByKey) Less(i, j int) bool { return n.Keys[i].Less(n.Keys[j]) }
-
-func (n *Node) Len() int { return len(n.Keys) }
+func (n *Node) Len() int           { return len(n.Keys) }
+func (n *Node) Less(i, j int) bool { return n.Keys[i].Less(n.Keys[j]) }
 func (n *Node) Swap(i, j int) {
 	if n.HasChild(i) || n.HasChild(j) {
 		panic(fmt.Sprintf("Cannot swap:\n%s", n))
 	}
 	n.Keys[i], n.Keys[j] = n.Keys[j], n.Keys[i]
 }
-func (n *Node) SortByKey()     { sort.Sort(&nodeByKey{n}) }
-func (n *Node) IsSortedByKey() { sort.IsSorted(&nodeByKey{n}) }
+func (n *Node) Sort()     { sort.Sort(n) }
+func (n *Node) IsSorted() { sort.IsSorted(n) }

@@ -24,7 +24,7 @@ func (b *BufferBalancer) Balance(n *Node, s KeySlice) KeySlice {
 		for i, key := range s {
 			n.UpdateEntry(i, key)
 		}
-		n.SortByKey()
+		n.Sort()
 		return nil
 	case occupied < n.MaxEntries():
 		// Merge random
@@ -35,7 +35,7 @@ func (b *BufferBalancer) Balance(n *Node, s KeySlice) KeySlice {
 			n.UpdateEntry(i, s[pick])
 			remainder.Remove(s[pick])
 		}
-		n.SortByKey()
+		n.Sort()
 		return remainder
 	default:
 		// Nothing to do
@@ -53,7 +53,7 @@ func (b *DistanceBalancer) Balance(n *Node, s KeySlice) KeySlice {
 		for i, key := range s {
 			n.UpdateEntry(i, key)
 		}
-		n.SortByKey()
+		n.Sort()
 		return nil
 	case occupied < n.MaxEntries():
 		// Merge and place in order
