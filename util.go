@@ -34,3 +34,10 @@ func debugPrintf(format string, a ...interface{}) {
 		fmt.Printf(format, a...)
 	}
 }
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
