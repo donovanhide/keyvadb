@@ -3,10 +3,9 @@ package keyvadb
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 	"sort"
-
-	"fmt"
 )
 
 type Hash [HashSize]byte
@@ -86,19 +85,9 @@ func (a Hash) Add(b Hash) Hash {
 	return newHash(sum.Add(sum, b.Big()))
 }
 
-func (a Hash) Sub(b Hash) Hash {
-	sum := a.Big()
-	return newHash(sum.Sub(sum, b.Big()))
-}
-
 func (a Hash) Divide(n int64) Hash {
 	quot := a.Big()
 	return newHash(quot.Div(quot, big.NewInt(n)))
-}
-
-func (a Hash) Multiply(n int64) Hash {
-	product := a.Big()
-	return newHash(product.Mul(product, big.NewInt(n)))
 }
 
 // Returns multiple of stride and distance.

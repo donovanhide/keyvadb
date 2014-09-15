@@ -63,7 +63,7 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 			return id, nil
 		}
 		var child *Node
-		if id == EmptyChild {
+		if id.Empty() {
 			if child, err = t.keys.New(start, end, t.Degree); err != nil {
 				return id, nil
 			}
@@ -118,7 +118,7 @@ var finishedWalkErr = errors.New("finished walking")
 func (t *Tree) walk(n *Node, start, end Hash, f WalkFunc) error {
 	for i, cid := range n.Children {
 		key := n.Keys[min(i, n.MaxEntries()-1)]
-		if start.Less(key.Hash) && cid != EmptyChild {
+		if start.Less(key.Hash) && !cid.Empty() {
 			child, err := t.keys.Get(cid)
 			if err != nil {
 				return err

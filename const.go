@@ -2,7 +2,6 @@ package keyvadb
 
 import (
 	"math"
-
 	"math/big"
 )
 

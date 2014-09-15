@@ -94,7 +94,7 @@ func (n *Node) Synthetics() int {
 func (n *Node) ChildCount() int {
 	count := 0
 	for _, child := range n.Children {
-		if child != EmptyChild {
+		if !child.Empty() {
 			count++
 		}
 	}
@@ -129,10 +129,6 @@ func (n *Node) NonEmptyKeys() KeySlice {
 		}
 	}
 	return keys
-}
-
-func (n *Node) Ranges() HashSlice {
-	return append(append(HashSlice{n.Start}, KeySlice(n.Keys[:]).Hashes()...), n.End)
 }
 
 func (n *Node) NonEmptyRanges() HashSlice {
