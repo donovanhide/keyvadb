@@ -82,12 +82,32 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 	return
 }
 
-// Returns number of values inserted and an error if encountered
-func (t *Tree) Add(values KeySlice) (int, error) {
-	if !values.IsSorted() {
+// Returns number of keys inserted and an error if encountered
+func (t *Tree) Add(keys KeySlice) (int, error) {
+	if !keys.IsSorted() {
 		return 0, fmt.Errorf("unsorted values provided")
 	}
-	return t.add(t.root, values)
+	return t.add(t.root, keys)
+}
+
+func (t *Tree) get(n *Node, hash Hash) (*Key, error) {
+	key, cid, err := n.GetKeyOrChild(hash)
+	switch {
+	case err != nil:
+		return nil, err
+	case key != nil:
+		return key, nil
+	default:
+		child, err := t.keys.Get(cid)
+		if err != nil {
+			return nil, err
+		}
+		return t.get(child, hash)
+	}
+}
+
+func (t *Tree) Get(hash Hash) (*Key, error) {
+	return t.get(t.root, hash)
 }
 
 func (t *Tree) each(level int, n *Node, f NodeFunc) error {

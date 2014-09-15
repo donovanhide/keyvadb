@@ -13,7 +13,7 @@ type Node struct {
 	Id       uint64
 	Start    Hash
 	End      Hash
-	Keys     []Key
+	Keys     KeySlice
 	Children []uint64
 }
 
@@ -24,6 +24,27 @@ func NewNode(start, end Hash, id, degree uint64) *Node {
 		End:      end,
 		Keys:     make(KeySlice, int(degree-1)),
 		Children: make([]uint64, int(degree)),
+	}
+}
+
+func (n *Node) GetKeyOrChild(hash Hash) (*Key, uint64, error) {
+	i := n.Keys.find(hash)
+	if i == len(n.Keys) {
+		if lastChild := n.Children[len(n.Children)-1]; lastChild != EmptyChild {
+			return nil, lastChild, nil
+		}
+		return nil, EmptyChild, ErrNotFound
+	}
+	cmp := n.Keys[i].Hash.Compare(hash)
+	switch {
+	case cmp == 0:
+		return n.Keys[i].Clone(), EmptyChild, nil
+	case cmp == 1 && n.Children[i] != EmptyChild:
+		return nil, n.Children[i], nil
+	case cmp == -1 && n.Children[i+1] != EmptyChild:
+		return nil, n.Children[i+1], nil
+	default:
+		return nil, EmptyChild, ErrNotFound
 	}
 }
 
@@ -47,8 +68,8 @@ func (n *Node) AddSyntheticKeys() {
 	cursor := n.Start.Add(stride)
 	for i := range n.Keys {
 		n.UpdateEntry(i, Key{
-			Key: cursor,
-			Id:  SyntheticChild,
+			Hash: cursor,
+			Id:   SyntheticChild,
 		})
 		cursor = cursor.Add(stride)
 	}
@@ -105,11 +126,11 @@ func (n *Node) NonEmptyKeys() KeySlice {
 }
 
 func (n *Node) Ranges() HashSlice {
-	return append(append(HashSlice{n.Start}, KeySlice(n.Keys[:]).Keys()...), n.End)
+	return append(append(HashSlice{n.Start}, KeySlice(n.Keys[:]).Hashes()...), n.End)
 }
 
 func (n *Node) NonEmptyRanges() HashSlice {
-	return append(append(HashSlice{n.Start}, n.NonEmptyKeys().Keys()...), n.End)
+	return append(append(HashSlice{n.Start}, n.NonEmptyKeys().Hashes()...), n.End)
 }
 
 func (n *Node) SanityCheck() bool {
@@ -144,15 +165,15 @@ func (n *Node) update(f ChildFunc, i int, start, end Hash) error {
 }
 
 func (n *Node) Each(f ChildFunc) error {
-	if err := n.update(f, 0, n.Start, n.Keys[0].Key); err != nil {
+	if err := n.update(f, 0, n.Start, n.Keys[0].Hash); err != nil {
 		return err
 	}
 	for i := range n.Keys[:len(n.Keys)-1] {
-		if err := n.update(f, i+1, n.Keys[i].Key, n.Keys[i+1].Key); err != nil {
+		if err := n.update(f, i+1, n.Keys[i].Hash, n.Keys[i+1].Hash); err != nil {
 			return err
 		}
 	}
-	return n.update(f, len(n.Keys), n.Keys[len(n.Keys)-1].Key, n.End)
+	return n.update(f, len(n.Keys), n.Keys[len(n.Keys)-1].Hash, n.End)
 }
 
 func (n *Node) String() string {

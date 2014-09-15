@@ -14,7 +14,7 @@ func (s KeySlice) FindNearestKeys(n *Node) DistanceMap {
 	entries := int64(n.MaxEntries())
 	nearest := make(DistanceMap)
 	for _, key := range s {
-		index, distance := key.Key.NearestStride(start, stride, halfStride, entries)
+		index, distance := key.Hash.NearestStride(start, stride, halfStride, entries)
 		if d, ok := nearest[index]; !ok || distance.Less(d.Distance) {
 			nearest[index] = Distance{distance, key}
 		}

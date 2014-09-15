@@ -7,6 +7,7 @@ func (s *KeyVaSuite) TestTree(c *C) {
 		ks := NewMemoryKeyStore()
 		vs := NewMemoryValueStore()
 		msg := Commentf(b.Name)
+		var allKeys KeySlice
 		tree, err := NewTree(9, ks, vs, b.Balancer)
 		c.Assert(err, IsNil, msg)
 		n := 1000
@@ -18,6 +19,7 @@ func (s *KeyVaSuite) TestTree(c *C) {
 			c.Assert(err, IsNil, msg)
 			keys := kv.Keys()
 			keys.Sort()
+			allKeys = append(allKeys, keys...)
 			n, err := tree.Add(keys)
 			c.Assert(err, IsNil, msg)
 			c.Assert(n, Equals, len(keys), msg)
@@ -27,6 +29,11 @@ func (s *KeyVaSuite) TestTree(c *C) {
 			// c.Assert(tree.Dump(os.Stdout), IsNil)
 			sum += n
 			c.Assert(summary.Total.NonSyntheticEntries(), Equals, uint64(sum), msg)
+		}
+		for _, key := range allKeys {
+			found, err := tree.Get(key.Hash)
+			c.Assert(err, IsNil)
+			c.Assert(found.Equals(key), Equals, true)
 		}
 	}
 }

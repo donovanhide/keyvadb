@@ -49,7 +49,7 @@ func (r *RandomValueGenerator) Next() (*KeyValue, error) {
 		return nil, err
 	}
 	hasher.Write(kv.Value)
-	copy(kv.Key.Key[:], hasher.Sum(nil))
+	copy(kv.Key.Hash[:], hasher.Sum(nil))
 	return kv, nil
 }
 
