@@ -9,12 +9,11 @@ import (
 	"runtime/pprof"
 	"strings"
 
-	"github.com/donovanhide/keyvadb"
-	"github.com/dustin/randbo"
-
 	"code.google.com/p/plotinum/plot"
 	"code.google.com/p/plotinum/plotter"
 	"code.google.com/p/plotinum/plotutil"
+	"github.com/donovanhide/keyvadb"
+	"github.com/dustin/randbo"
 )
 
 var num = flag.Int("num", 10000, "number of values to insert in one batch")
@@ -42,10 +41,9 @@ func main() {
 	data := make(levelData)
 	for _, balancer := range keyvadb.Balancers {
 		ms := keyvadb.NewMemoryKeyStore()
-		mv := keyvadb.NewMemoryValueStore()
 		r := randbo.NewFrom(rand.NewSource(*seed))
 		gen := keyvadb.NewRandomValueGenerator(10, 50, r)
-		tree, err := keyvadb.NewTree(*degree, ms, mv, balancer.Balancer)
+		tree, err := keyvadb.NewTree(*degree, ms, balancer.Balancer)
 		checkErr(err)
 		sum := 0
 		for i := 0; i < *rounds; i++ {

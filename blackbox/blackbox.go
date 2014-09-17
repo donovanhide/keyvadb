@@ -41,10 +41,9 @@ func main() {
 		batch := min(rand.Intn(*maxBatch-*minBatch)+*minBatch, *num)
 		for _, balancer := range keyvadb.Balancers {
 			ms := keyvadb.NewMemoryKeyStore()
-			mv := keyvadb.NewMemoryValueStore()
 			r := randbo.NewFrom(rand.NewSource(*seed))
 			gen := keyvadb.NewRandomValueGenerator(10, 50, r)
-			tree, err := keyvadb.NewTree(degree, ms, mv, balancer.Balancer)
+			tree, err := keyvadb.NewTree(degree, ms, balancer.Balancer)
 			checkErr(err)
 			for left := *num; left > 0; left -= batch {
 				take := min(batch, left)
