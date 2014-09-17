@@ -10,12 +10,12 @@ func (s *KeyVaSuite) TestTree(c *C) {
 		var allKeys KeySlice
 		tree, err := NewTree(8, ks, vs, b.Balancer)
 		c.Assert(err, IsNil, msg)
-		n := 1000
+		batch := 1000
 		rounds := 10
 		gen := NewRandomValueGenerator(10, 50, s.R)
 		sum := 0
 		for i := 0; i < rounds; i++ {
-			kv, err := gen.Take(n)
+			kv, err := gen.Take(batch)
 			c.Assert(err, IsNil, msg)
 			keys := kv.Keys()
 			keys.Sort()
@@ -23,12 +23,17 @@ func (s *KeyVaSuite) TestTree(c *C) {
 			n, err := tree.Add(keys)
 			c.Assert(err, IsNil, msg)
 			c.Assert(n, Equals, len(keys), msg)
+			sum += n
 			summary, err := NewSummary(tree)
 			c.Assert(err, IsNil, msg)
 			c.Logf("%08d: %12s: %s", i, b.Name, summary.Overall())
 			// c.Assert(tree.Dump(os.Stdout), IsNil)
-			sum += n
 			c.Assert(summary.Total.NonSyntheticEntries(), Equals, uint64(sum), msg)
+			// Add them again
+			c.Log(b.Name)
+			n, err = tree.Add(keys)
+			c.Assert(err, IsNil, msg)
+			c.Assert(n, Equals, batch, msg)
 		}
 		// Check all keys were added
 		for _, key := range allKeys {

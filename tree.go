@@ -1,7 +1,6 @@
 package keyvadb
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -43,14 +42,10 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 	if len(v) == 0 {
 		panic("no values to add")
 	}
-	maxInsertions := n.TotalEmpty()
 	debugPrintln(n)
 	remainder := t.balancer.Balance(n, v)
 	debugPrintln(n)
 	insertions = len(v) - len(remainder)
-	if insertions > maxInsertions {
-		panic(fmt.Sprintf("too many insertions: %d max: %d", insertions, maxInsertions))
-	}
 	if *debug && !n.SanityCheck() {
 		panic(fmt.Sprintf("not sane:\n%s", n))
 	}
@@ -72,14 +67,12 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 			if child, err = t.keys.Get(id); err != nil {
 				return id, err
 			}
+			// child = child.Clone()
 		}
 		childInsertions, err := t.add(child, candidates)
 		insertions += childInsertions
 		return id, err
 	})
-	if len(v) != insertions {
-		panic(fmt.Sprintf("Wrong number of insertions: Expected:%d Got:%d\n", len(v), insertions))
-	}
 	return
 }
 
@@ -88,50 +81,34 @@ func (t *Tree) Add(keys KeySlice) (int, error) {
 	if !keys.IsSorted() {
 		return 0, fmt.Errorf("unsorted values provided")
 	}
-	return t.add(t.root, keys)
-}
-
-func (t *Tree) get(n *Node, hash Hash) (*Key, error) {
-	key, cid, err := n.GetKeyOrChild(hash)
-	switch {
-	case err != nil:
-		return nil, err
-	case key != nil:
-		return key, nil
-	default:
-		child, err := t.keys.Get(cid)
-		if err != nil {
-			return nil, err
-		}
-		return t.get(child, hash)
+	unique := keys.Clone()
+	unique.Unique()
+	if len(unique) < len(keys) {
+		return 0, fmt.Errorf("values provided are not unique")
 	}
-}
-
-func (t *Tree) Get(hash Hash) (*Key, error) {
-	return t.get(t.root, hash)
+	return t.add(t.root, unique)
 }
 
 type WalkFunc func(key *Key)
 
-var finishedWalkErr = errors.New("finished walking")
-
-func (t *Tree) walk(n *Node, start, end Hash, f WalkFunc) error {
+func (t *Tree) walk(id NodeId, start, end Hash, f WalkFunc) error {
+	n, err := t.keys.Get(id)
+	if err != nil {
+		return err
+	}
 	for i, cid := range n.Children {
-		key := n.Keys[min(i, n.MaxEntries()-1)]
-		if start.Less(key.Hash) && !cid.Empty() {
-			child, err := t.keys.Get(cid)
-			if err != nil {
-				return err
-			}
-			if err := t.walk(child, start, end, f); err != nil {
-				return err
+		if !cid.Empty() {
+			if s, e := n.GetChildRange(i); !end.Less(s) && !start.Greater(e) {
+				if err := t.walk(cid, start, end, f); err != nil {
+					return err
+				}
 			}
 		}
-		if end.Compare(key.Hash) < 0 {
-			return finishedWalkErr
-		}
-		if i < n.MaxEntries() && start.Compare(key.Hash) <= 0 && !key.Id.Synthetic() {
-			f(key.Clone())
+		if i < n.MaxEntries() {
+			key := n.Keys[i]
+			if start.Compare(key.Hash) <= 0 && end.Compare(key.Hash) >= 0 && !key.Id.Synthetic() {
+				f(key.Clone())
+			}
 		}
 	}
 	return nil
@@ -139,13 +116,22 @@ func (t *Tree) walk(n *Node, start, end Hash, f WalkFunc) error {
 
 // Walk the tree in key order from start to end inclusive
 func (t *Tree) Walk(start, end Hash, f WalkFunc) error {
-	if err := t.walk(t.root, start, end, f); err != finishedWalkErr {
-		return err
-	}
-	return nil
+	return t.walk(t.root.Id, start, end, f)
 }
 
-func (t *Tree) each(level int, n *Node, f NodeFunc) error {
+func (t *Tree) Get(hash Hash) (*Key, error) {
+	var result *Key
+	return result, t.walk(t.root.Id, hash, hash, func(key *Key) {
+		result = key
+	})
+
+}
+
+func (t *Tree) each(id NodeId, level int, f NodeFunc) error {
+	n, err := t.keys.Get(id)
+	if err != nil {
+		return err
+	}
 	if err := f(level, n); err != nil {
 		return err
 	}
@@ -153,17 +139,13 @@ func (t *Tree) each(level int, n *Node, f NodeFunc) error {
 		if id.Empty() {
 			return id, nil
 		}
-		child, err := t.keys.Get(id)
-		if err != nil {
-			return id, err
-		}
-		return id, t.each(level+1, child, f)
+		return id, t.each(id, level+1, f)
 	})
 }
 
 // Visit each node
 func (t *Tree) Each(f NodeFunc) error {
-	return t.each(0, t.root, f)
+	return t.each(t.root.Id, 0, f)
 }
 
 func (t *Tree) Dump(w io.Writer) error {

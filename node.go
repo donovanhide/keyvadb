@@ -33,24 +33,26 @@ func NewNode(start, end Hash, id NodeId, degree uint64) *Node {
 	}
 }
 
-func (n *Node) GetKeyOrChild(hash Hash) (*Key, NodeId, error) {
-	i := n.Keys.find(hash)
-	if i == len(n.Keys) {
-		if lastChild := n.Children[len(n.Children)-1]; !lastChild.Empty() {
-			return nil, lastChild, nil
-		}
-		return nil, EmptyChild, ErrNotFound
+func (n *Node) Clone() *Node {
+	c := &Node{
+		Id:    n.Id,
+		Start: n.Start,
+		End:   n.End,
+		Keys:  n.Keys.Clone(),
 	}
-	cmp := n.Keys[i].Hash.Compare(hash)
-	switch {
-	case cmp == 0:
-		return n.Keys[i].Clone(), EmptyChild, nil
-	case cmp == 1 && !n.Children[i].Empty():
-		return nil, n.Children[i], nil
-	case cmp == -1 && n.Children[i+1].Empty():
-		return nil, n.Children[i+1], nil
+	c.Children = make([]NodeId, len(n.Children))
+	copy(c.Children, n.Children)
+	return c
+}
+
+func (n *Node) GetChildRange(i int) (Hash, Hash) {
+	switch i {
+	case 0:
+		return n.Start, n.Keys[0].Hash
+	case n.MaxEntries():
+		return n.Keys[i-1].Hash, n.End
 	default:
-		return nil, EmptyChild, ErrNotFound
+		return n.Keys[i-1].Hash, n.Keys[i].Hash
 	}
 }
 

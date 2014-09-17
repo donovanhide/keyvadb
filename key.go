@@ -91,6 +91,49 @@ func (s KeySlice) Clone() KeySlice {
 	return c
 }
 
+// If s is sorted make contents unique in place
+// Comparison is based on the Hash fields being equivalent
+func (s *KeySlice) Unique() {
+	length := len(*s) - 1
+	for i := 0; i < length; i++ {
+		for j := i + 1; j <= length; j++ {
+			if (*s)[i].Hash == (*s)[j].Hash {
+				(*s)[j] = (*s)[length]
+				(*s) = (*s)[0:length]
+				length--
+				j--
+			}
+		}
+	}
+}
+
+// Finds the union of two sorted KeySlices
+// containing unique Hashes
+func (a KeySlice) Union(b KeySlice) KeySlice {
+	union := make(KeySlice, 0, len(a)+len(b))
+	i, j := 0, 0
+	for {
+		switch {
+		case i == len(a):
+			return append(union, b[j:]...)
+		case j == len(b):
+			return append(union, a[i:]...)
+		}
+		switch a[i].Hash.Compare(b[j].Hash) {
+		case -1:
+			union = append(union, a[i])
+			i++
+		case 1:
+			union = append(union, b[j])
+			j++
+		case 0:
+			union = append(union, a[i])
+			i++
+			j++
+		}
+	}
+}
+
 func (s KeySlice) String() string {
 	return dumpWithTitle("Keys", s.Hashes(), 0)
 }

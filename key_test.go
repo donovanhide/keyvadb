@@ -19,3 +19,33 @@ func (s *KeyVaSuite) TestKeys(c *C) {
 	c.Assert(section[0].Hash.Compare(end) < 0, Equals, true)
 	c.Assert(section[0].Hash.Distance(section[len(section)-1].Hash).Compare(maxDistance) <= 0, Equals, true)
 }
+
+var k1 = KeySlice{
+	{Hash: MustHash("4000000000000000000000000000000000000000000000000000000000000000"), Id: 0},
+	{Hash: MustHash("6000000000000000000000000000000000000000000000000000000000000000"), Id: 1},
+	{Hash: MustHash("4000000000000000000000000000000000000000000000000000000000000000"), Id: 0},
+	{Hash: MustHash("4000000000000000000000000000000000000000000000000000000000000000"), Id: 2},
+	{Hash: MustHash("6000000000000000000000000000000000000000000000000000000000000000"), Id: 0},
+}
+var k2 = KeySlice{
+	{Hash: MustHash("4000000000000000000000000000000000000000000000000000000000000000"), Id: 0},
+	{Hash: MustHash("6000000000000000000000000000000000000000000000000000000000000000"), Id: 1},
+	{Hash: MustHash("8000000000000000000000000000000000000000000000000000000000000000"), Id: 0},
+}
+
+func (s *KeyVaSuite) TestKeyUnique(c *C) {
+	k := k1.Clone()
+	k.Sort()
+	k.Unique()
+	c.Assert(len(k), Equals, 2)
+}
+func (s *KeyVaSuite) TestKeyUnion(c *C) {
+	u1 := k1.Clone()
+	u2 := k2.Clone()
+	u1.Sort()
+	u2.Sort()
+	u1.Unique()
+	u2.Unique()
+	u3 := u1.Union(u2)
+	c.Assert(len(u3), Equals, 3)
+}
