@@ -37,7 +37,7 @@ func NewFileDB(degree, batch uint64, balancer, filename string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	keys, err := NewFileKeyStore(filename)
+	keys, err := NewFileKeyStore(degree, filename)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (db *DB) Add(key Hash, value []byte) error {
 		return err
 	}
 	db.buffer[key] = kv.Key
-	if uint64(len(db.buffer)) > db.batch {
+	if uint64(len(db.buffer)) >= db.batch {
 		var keys KeySlice
 		for _, key := range db.buffer {
 			keys = append(keys, key)
@@ -78,5 +78,4 @@ func (db *DB) Get(hash Hash) (*KeyValue, error) {
 		return nil, err
 	}
 	return db.values.Get(key.Id)
-
 }

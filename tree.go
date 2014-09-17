@@ -17,14 +17,8 @@ func NewTree(degree uint64, keys KeyStore, balancer Balancer) (*Tree, error) {
 	if degree < 2 {
 		return nil, fmt.Errorf("degree must be 2 or above")
 	}
-	root, err := keys.Get(0)
-	switch {
-	case err == ErrNotFound:
-		root = NewNode(FirstHash, LastHash, 0, degree)
-		// root.AddSyntheticKeys()
-	case err != nil:
-		return nil, err
-	}
+	root := NewNode(FirstHash, LastHash, rootNodeId, degree)
+	root.AddSyntheticKeys()
 	if err := keys.Set(root); err != nil {
 		return nil, err
 	}
@@ -47,9 +41,6 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 	if *debug && !n.SanityCheck() {
 		panic(fmt.Sprintf("not sane:\n%s", n))
 	}
-	if insertions == len(v) {
-		return
-	}
 	err = n.Each(func(id NodeId, start, end Hash) (NodeId, error) {
 		candidates := remainder.GetRange(start, end)
 		if len(candidates) == 0 {
@@ -62,7 +53,7 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 			}
 			id = child.Id
 		} else {
-			if child, err = t.keys.Get(id); err != nil {
+			if child, err = t.keys.Get(id, t.Degree); err != nil {
 				return id, err
 			}
 			// child = child.Clone()
@@ -71,6 +62,10 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 		insertions += childInsertions
 		return id, err
 	})
+	if err != nil {
+		return
+	}
+	err = t.keys.Set(n)
 	return
 }
 
@@ -90,7 +85,7 @@ func (t *Tree) Add(keys KeySlice) (int, error) {
 type WalkFunc func(key *Key)
 
 func (t *Tree) walk(id NodeId, start, end Hash, f WalkFunc) error {
-	n, err := t.keys.Get(id)
+	n, err := t.keys.Get(id, t.Degree)
 	if err != nil {
 		return err
 	}
@@ -122,11 +117,10 @@ func (t *Tree) Get(hash Hash) (*Key, error) {
 	return result, t.walk(t.root.Id, hash, hash, func(key *Key) {
 		result = key
 	})
-
 }
 
 func (t *Tree) each(id NodeId, level int, f NodeFunc) error {
-	n, err := t.keys.Get(id)
+	n, err := t.keys.Get(id, t.Degree)
 	if err != nil {
 		return err
 	}

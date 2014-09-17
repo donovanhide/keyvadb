@@ -1,7 +1,9 @@
 package keyvadb
 
 import (
+	"encoding/binary"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 )
@@ -185,8 +187,8 @@ func (n *Node) String() string {
 	for i := range n.Keys {
 		items = append(items, fmt.Sprintf("%08d\t%s", i, n.Keys[i]))
 	}
-	format := "Id:\t\t%d\nWell Formed:\t%t\nOccupancy:\t%d\nChildren:\t%d\nStart:\t\t%s\nEnd:\t\t%s\nDistance:\t%s\nStride:\t\t%s\n--------\n%s\n--------"
-	return fmt.Sprintf(format, n.Id, n.SanityCheck(), n.Occupancy(), n.ChildCount(), n.Start, n.End, n.Distance(), n.Stride(), strings.Join(items, "\n"))
+	format := "Id:\t\t%d\nWell Formed:\t%t\nOccupancy:\t%d\nChildren:\t%+v\nStart:\t\t%s\nEnd:\t\t%s\nDistance:\t%s\nStride:\t\t%s\n--------\n%s\n--------"
+	return fmt.Sprintf(format, n.Id, n.SanityCheck(), n.Occupancy(), n.Children, n.Start, n.End, n.Distance(), n.Stride(), strings.Join(items, "\n"))
 }
 
 func (n *Node) Len() int           { return len(n.Keys) }
@@ -199,3 +201,29 @@ func (n *Node) Swap(i, j int) {
 }
 func (n *Node) Sort()          { sort.Sort(n) }
 func (n *Node) IsSorted() bool { return sort.IsSorted(n) }
+
+func (n *Node) MarshalBinary(w io.Writer) error {
+	if err := binary.Write(w, binary.BigEndian, n.Start[:]); err != nil {
+		return err
+	}
+	if err := binary.Write(w, binary.BigEndian, n.Keys); err != nil {
+		return err
+	}
+	if err := binary.Write(w, binary.BigEndian, n.End[:]); err != nil {
+		return err
+	}
+	return binary.Write(w, binary.BigEndian, n.Children)
+}
+
+func (n *Node) UnmarshalBinary(r io.Reader) error {
+	if err := binary.Read(r, binary.BigEndian, n.Start[:]); err != nil {
+		return err
+	}
+	if err := binary.Read(r, binary.BigEndian, n.Keys); err != nil {
+		return err
+	}
+	if err := binary.Read(r, binary.BigEndian, n.End[:]); err != nil {
+		return err
+	}
+	return binary.Read(r, binary.BigEndian, n.Children)
+}

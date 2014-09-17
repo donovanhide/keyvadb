@@ -18,20 +18,24 @@ func NewMemoryKeyStore() KeyStore {
 }
 
 func (m *MemoryKeyStore) New(start, end Hash, degree uint64) (*Node, error) {
-	id := NodeId(len(m.cache))
+	debugPrintln("Memory New:", start, end, degree)
+	id := rootNodeId + NodeId(len(m.cache))
 	node := NewNode(start, end, id, degree)
 	m.cache[node.Id] = node
 	return node, nil
 }
 
 func (m *MemoryKeyStore) Set(node *Node) error {
+	debugPrintln("Memory Set:", node.Id)
 	m.cache[node.Id] = node
 	return nil
 }
 
-func (m *MemoryKeyStore) Get(id NodeId) (*Node, error) {
+func (m *MemoryKeyStore) Get(id NodeId, degree uint64) (*Node, error) {
+	debugPrintln("Memory Get:", id, degree)
 	if node, ok := m.cache[id]; ok {
-		return node, nil
+		debugPrintln(node)
+		return node.Clone(), nil
 	}
 	return nil, ErrNotFound
 }

@@ -23,8 +23,14 @@ func (s KeyValueSlice) Keys() KeySlice {
 var lengthSize = binary.Size(uint64(0))
 
 func (kv *KeyValue) MarshalBinary(w io.Writer) error {
-	format := []interface{}{uint64(len(kv.Key.Hash) + len(kv.Value) + lengthSize), kv.Key.Hash, kv.Value}
-	return binary.Write(w, binary.BigEndian, format)
+	length := uint64(len(kv.Key.Hash) + len(kv.Value) + lengthSize)
+	if err := binary.Write(w, binary.BigEndian, length); err != nil {
+		return err
+	}
+	if err := binary.Write(w, binary.BigEndian, kv.Key.Hash); err != nil {
+		return err
+	}
+	return binary.Write(w, binary.BigEndian, kv.Value)
 }
 
 func (kv *KeyValue) UnmarshalBinary(r io.Reader) error {
@@ -35,7 +41,7 @@ func (kv *KeyValue) UnmarshalBinary(r io.Reader) error {
 	if err := binary.Read(r, binary.BigEndian, &kv.Hash); err != nil {
 		return err
 	}
-	kv.Value = make([]byte, length)
+	kv.Value = make([]byte, int(length)-len(kv.Hash)-lengthSize)
 	return binary.Read(r, binary.BigEndian, &kv.Value)
 }
 
