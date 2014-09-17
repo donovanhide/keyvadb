@@ -5,10 +5,9 @@ import . "gopkg.in/check.v1"
 func (s *KeyVaSuite) TestTree(c *C) {
 	for _, b := range Balancers {
 		ks := NewMemoryKeyStore()
-		vs := NewMemoryValueStore()
 		msg := Commentf(b.Name)
 		var allKeys KeySlice
-		tree, err := NewTree(8, ks, vs, b.Balancer)
+		tree, err := NewTree(8, ks, b.Balancer)
 		c.Assert(err, IsNil, msg)
 		batch := 1000
 		rounds := 10
@@ -30,7 +29,6 @@ func (s *KeyVaSuite) TestTree(c *C) {
 			// c.Assert(tree.Dump(os.Stdout), IsNil)
 			c.Assert(summary.Total.NonSyntheticEntries(), Equals, uint64(sum), msg)
 			// Add them again
-			c.Log(b.Name)
 			n, err = tree.Add(keys)
 			c.Assert(err, IsNil, msg)
 			c.Assert(n, Equals, batch, msg)

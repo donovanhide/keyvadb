@@ -13,9 +13,9 @@ type KeyStore interface {
 }
 
 type ValueStore interface {
-	Append(*KeyValue) (ValueId, error)
+	Append(Hash, []byte) (*KeyValue, error)
 	Get(id ValueId) (*KeyValue, error)
-	Each(func(int, *KeyValue) error) error
+	Each(func(*KeyValue)) error
 }
 
 type Balancer interface {

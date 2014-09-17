@@ -10,11 +10,10 @@ type Tree struct {
 	Degree   uint64
 	root     *Node
 	keys     KeyStore
-	values   ValueStore
 	balancer Balancer
 }
 
-func NewTree(degree uint64, keys KeyStore, values ValueStore, balancer Balancer) (*Tree, error) {
+func NewTree(degree uint64, keys KeyStore, balancer Balancer) (*Tree, error) {
 	if degree < 2 {
 		return nil, fmt.Errorf("degree must be 2 or above")
 	}
@@ -33,7 +32,6 @@ func NewTree(degree uint64, keys KeyStore, values ValueStore, balancer Balancer)
 		Degree:   degree,
 		root:     root,
 		keys:     keys,
-		values:   values,
 		balancer: balancer,
 	}, nil
 }

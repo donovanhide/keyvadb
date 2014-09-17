@@ -40,10 +40,16 @@ func NewMemoryValueStore() ValueStore {
 	return &MemoryValueStore{}
 }
 
-func (m *MemoryValueStore) Append(v *KeyValue) (ValueId, error) {
-	id := ValueId(len(m.cache))
-	m.cache = append(m.cache, v)
-	return id, nil
+func (m *MemoryValueStore) Append(key Hash, value []byte) (*KeyValue, error) {
+	kv := &KeyValue{
+		Key: Key{
+			Id:   ValueId(len(m.cache)),
+			Hash: key,
+		},
+		Value: value,
+	}
+	m.cache = append(m.cache, kv)
+	return kv, nil
 }
 
 func (m *MemoryValueStore) Get(id ValueId) (*KeyValue, error) {
@@ -53,11 +59,9 @@ func (m *MemoryValueStore) Get(id ValueId) (*KeyValue, error) {
 	return m.cache[id], nil
 }
 
-func (m *MemoryValueStore) Each(f func(int, *KeyValue) error) error {
-	for i, v := range m.cache {
-		if err := f(i, v); err != nil {
-			return err
-		}
+func (m *MemoryValueStore) Each(f func(*KeyValue)) error {
+	for _, v := range m.cache {
+		f(v)
 	}
 	return nil
 }
