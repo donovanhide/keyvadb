@@ -19,5 +19,5 @@ type ValueStore interface {
 }
 
 type Balancer interface {
-	Balance(*Node, KeySlice) KeySlice
+	Balance(*Node, KeySlice) (KeySlice, bool)
 }

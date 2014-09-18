@@ -35,7 +35,7 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 		panic("no values to add")
 	}
 	debugPrintln(n)
-	remainder := t.balancer.Balance(n, v)
+	remainder, dirty := t.balancer.Balance(n, v)
 	debugPrintln(n)
 	insertions = len(v) - len(remainder)
 	if *debug && !n.SanityCheck() {
@@ -52,11 +52,11 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 				return id, nil
 			}
 			id = child.Id
+			dirty = true
 		} else {
 			if child, err = t.keys.Get(id, t.Degree); err != nil {
 				return id, err
 			}
-			// child = child.Clone()
 		}
 		childInsertions, err := t.add(child, candidates)
 		insertions += childInsertions
@@ -65,7 +65,9 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 	if err != nil {
 		return
 	}
-	err = t.keys.Set(n)
+	if dirty {
+		err = t.keys.Set(n)
+	}
 	return
 }
 
