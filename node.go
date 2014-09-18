@@ -115,16 +115,6 @@ func (n *Node) Occupancy() int {
 	return count
 }
 
-func (n *Node) TotalEmpty() int {
-	count := 0
-	for _, key := range n.Keys {
-		if key.Empty() {
-			count++
-		}
-	}
-	return count
-}
-
 func (n *Node) NonEmptyKeys() KeySlice {
 	var keys KeySlice
 	for _, key := range n.Keys {
