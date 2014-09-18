@@ -82,7 +82,7 @@ func (t *Tree) Add(keys KeySlice) (int, error) {
 	return t.add(t.root, unique)
 }
 
-type WalkFunc func(key *Key)
+type WalkFunc func(key *Key) error
 
 func (t *Tree) walk(id NodeId, start, end Hash, f WalkFunc) error {
 	n, err := t.keys.Get(id, t.Degree)
@@ -100,7 +100,9 @@ func (t *Tree) walk(id NodeId, start, end Hash, f WalkFunc) error {
 		if i < n.MaxEntries() {
 			key := n.Keys[i]
 			if start.Compare(key.Hash) <= 0 && end.Compare(key.Hash) >= 0 && !key.Id.Synthetic() {
-				f(key.Clone())
+				if err := f(key.Clone()); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -114,8 +116,9 @@ func (t *Tree) Walk(start, end Hash, f WalkFunc) error {
 
 func (t *Tree) Get(hash Hash) (*Key, error) {
 	var result *Key
-	return result, t.walk(t.root.Id, hash, hash, func(key *Key) {
+	return result, t.walk(t.root.Id, hash, hash, func(key *Key) error {
 		result = key
+		return nil
 	})
 }
 

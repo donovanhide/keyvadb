@@ -79,3 +79,20 @@ func (db *DB) Get(hash Hash) (*KeyValue, error) {
 	}
 	return db.values.Get(key.Id)
 }
+
+type KeyValueFunc func(*KeyValue)
+
+func (db *DB) All(f KeyValueFunc) error {
+	return db.values.Each(f)
+}
+
+func (db *DB) Range(start, end Hash, f KeyValueFunc) error {
+	return db.tree.Walk(start, end, func(key *Key) error {
+		kv, err := db.values.Get(key.Id)
+		if err != nil {
+			return err
+		}
+		f(kv)
+		return nil
+	})
+}

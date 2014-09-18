@@ -42,20 +42,22 @@ func (s *KeyVaSuite) TestTree(c *C) {
 		// Check all keys can be walked in order
 		i := 0
 		allKeys.Sort()
-		err = tree.Walk(FirstHash, LastHash, func(key *Key) {
+		err = tree.Walk(FirstHash, LastHash, func(key *Key) error {
 			// c.Log(key, allKeys[i])
 			c.Assert(key.Equals(allKeys[i]), Equals, true)
 			i++
+			return nil
 		})
 		c.Assert(err, IsNil)
 		c.Assert(i, Equals, len(allKeys))
 		// Check subset of keys are walked in order
 		j := 100
 		start, end := allKeys[j].Hash, allKeys[len(allKeys)-100].Hash
-		err = tree.Walk(start, end, func(key *Key) {
+		err = tree.Walk(start, end, func(key *Key) error {
 			// c.Log(key, allKeys[j])
 			c.Assert(key.Equals(allKeys[j]), Equals, true)
 			j++
+			return nil
 		})
 		c.Assert(err, IsNil)
 		c.Assert(j, Equals, len(allKeys)-99)

@@ -19,18 +19,26 @@ func (s HashSlice) Sort()              { sort.Sort(s) }
 func (s HashSlice) IsSorted() bool     { return sort.IsSorted(s) }
 func (s HashSlice) String() string     { return dumpWithTitle("Hashes", s, 0) }
 
-func MustHash(s string) Hash {
+func NewHash(s string) (*Hash, error) {
 	b, err := hex.DecodeString(s)
 	switch {
 	case err != nil:
-		panic(err)
+		return nil, err
 	case len(b) != HashSize:
-		panic("Hash wrong length")
+		return nil, fmt.Errorf("Hash wrong length")
 	default:
 		var hash Hash
 		copy(hash[:], b)
-		return hash
+		return &hash, nil
 	}
+}
+
+func MustHash(s string) Hash {
+	hash, err := NewHash(s)
+	if err != nil {
+		panic(err)
+	}
+	return *hash
 }
 
 // Clamps and ensures value is absolute
