@@ -18,6 +18,12 @@ type ValueStore interface {
 	Each(func(*KeyValue)) error
 }
 
+type Journal interface {
+	Swap(current, previous *Node)
+	Commit() error
+	String() string
+}
+
 type Balancer interface {
 	Balance(*Node, KeySlice) (KeySlice, bool)
 }

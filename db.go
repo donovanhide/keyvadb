@@ -2,34 +2,48 @@ package keyvadb
 
 import "fmt"
 
-type DB struct {
-	tree   *Tree
-	batch  uint64
-	buffer map[Hash]Key
-	keys   KeyStore
-	values ValueStore
+type DBConfig struct {
+	name     string
+	degree   uint64
+	batch    uint64
+	balancer string
+	keys     KeyStore
+	values   ValueStore
+	journal  Journal
 }
 
-func newDB(degree, batch uint64, name string, keys KeyStore, values ValueStore) (*DB, error) {
-	balancer, err := newBalancer(name)
+type DB struct {
+	*DBConfig
+	tree   *Tree
+	buffer map[Hash]Key
+}
+
+func newDB(conf *DBConfig) (*DB, error) {
+	balancer, err := newBalancer(conf.balancer)
 	if err != nil {
 		return nil, err
 	}
-	tree, err := NewTree(degree, keys, balancer)
+	tree, err := NewTree(conf.degree, conf.keys, balancer)
 	if err != nil {
 		return nil, err
 	}
 	return &DB{
-		tree:   tree,
-		batch:  batch,
-		buffer: make(map[Hash]Key, int(batch)),
-		keys:   keys,
-		values: values,
+		tree:     tree,
+		buffer:   make(map[Hash]Key, int(conf.batch)),
+		DBConfig: conf,
 	}, nil
 }
 
 func NewMemoryDB(degree, batch uint64, balancer string) (*DB, error) {
-	return newDB(degree, batch, balancer, NewMemoryKeyStore(), NewMemoryValueStore())
+	keys, values := NewMemoryKeyStore(), NewMemoryValueStore()
+	return newDB(&DBConfig{
+		degree:   degree,
+		batch:    batch,
+		balancer: balancer,
+		keys:     keys,
+		values:   values,
+		journal:  NewSimpleJournal("Simple Journal", keys, values),
+	})
 }
 
 func NewFileDB(degree, batch uint64, balancer, filename string) (*DB, error) {
@@ -41,7 +55,15 @@ func NewFileDB(degree, batch uint64, balancer, filename string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newDB(degree, batch, balancer, keys, values)
+	journal, err := NewFileJournal(filename, keys, values)
+	return newDB(&DBConfig{
+		degree:   degree,
+		batch:    batch,
+		balancer: balancer,
+		keys:     keys,
+		values:   values,
+		journal:  journal,
+	})
 }
 
 func (db *DB) Add(key Hash, value []byte) error {
