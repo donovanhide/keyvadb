@@ -22,7 +22,7 @@ func (s *KeyVaSuite) fillDB(db *DB, c *C) {
 }
 
 func (s *KeyVaSuite) TestMemoryDB(c *C) {
-	db, err := NewMemoryDB(8, 10, "Distance")
+	db, err := NewMemoryDB(10, 10, "Distance")
 	c.Assert(err, IsNil)
 	s.fillDB(db, c)
 }
@@ -30,7 +30,7 @@ func (s *KeyVaSuite) TestMemoryDB(c *C) {
 func (s *KeyVaSuite) TestFileDB(c *C) {
 	os.Remove("test.values")
 	os.Remove("test.keys")
-	db, err := NewFileDB(8, 10, "Distance", "test")
+	db, err := NewFileDB(84, 10, "Distance", "test")
 	c.Assert(err, IsNil)
 	s.fillDB(db, c)
 }

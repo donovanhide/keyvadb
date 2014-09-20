@@ -7,8 +7,10 @@ import (
 
 const (
 	HashSize       = 32
+	RootNode       = NodeId(0)
 	EmptyChild     = NodeId(0)
 	SyntheticValue = ValueId(math.MaxUint64)
+	NodeBlockSize  = 4096
 )
 
 var (

@@ -8,7 +8,6 @@ import (
 
 type Tree struct {
 	Degree   uint64
-	root     *Node
 	keys     KeyStore
 	balancer Balancer
 }
@@ -17,14 +16,13 @@ func NewTree(degree uint64, keys KeyStore, balancer Balancer) (*Tree, error) {
 	if degree < 2 {
 		return nil, fmt.Errorf("degree must be 2 or above")
 	}
-	root := NewNode(FirstHash, LastHash, rootNodeId, degree)
+	root := NewNode(FirstHash, LastHash, RootNode, degree)
 	root.AddSyntheticKeys()
 	if err := keys.Set(root); err != nil {
 		return nil, err
 	}
 	return &Tree{
 		Degree:   degree,
-		root:     root,
 		keys:     keys,
 		balancer: balancer,
 	}, nil
@@ -81,7 +79,11 @@ func (t *Tree) Add(keys KeySlice) (int, error) {
 	if len(unique) < len(keys) {
 		return 0, fmt.Errorf("values provided are not unique")
 	}
-	return t.add(t.root, unique)
+	root, err := t.keys.Get(RootNode, t.Degree)
+	if err != nil {
+		return 0, fmt.Errorf("cannot get root node: %s", err.Error())
+	}
+	return t.add(root, unique)
 }
 
 type WalkFunc func(key *Key) error
@@ -113,12 +115,12 @@ func (t *Tree) walk(id NodeId, start, end Hash, f WalkFunc) error {
 
 // Walk the tree in key order from start to end inclusive
 func (t *Tree) Walk(start, end Hash, f WalkFunc) error {
-	return t.walk(t.root.Id, start, end, f)
+	return t.walk(RootNode, start, end, f)
 }
 
 func (t *Tree) Get(hash Hash) (*Key, error) {
 	var result *Key
-	return result, t.walk(t.root.Id, hash, hash, func(key *Key) error {
+	return result, t.walk(RootNode, hash, hash, func(key *Key) error {
 		result = key
 		return nil
 	})
@@ -142,7 +144,7 @@ func (t *Tree) each(id NodeId, level int, f NodeFunc) error {
 
 // Visit each node
 func (t *Tree) Each(f NodeFunc) error {
-	return t.each(t.root.Id, 0, f)
+	return t.each(RootNode, 0, f)
 }
 
 func (t *Tree) Dump(w io.Writer) error {

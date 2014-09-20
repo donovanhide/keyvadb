@@ -1,88 +1,56 @@
 package keyvadb
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
+	"sync/atomic"
+
+	"github.com/siddontang/go/ioutil2"
 )
 
-type FileStoreConfig struct {
-	LastId ValueId
-	Degree uint64
-}
-
 type FileKeyStore struct {
-	FileStoreConfig
-	f *os.File
+	f      *os.File
+	length int64
 }
-
-var rootNodeId = NodeId(binary.Size(FileStoreConfig{}))
 
 func NewFileKeyStore(degree uint64, filename string) (KeyStore, error) {
 	f, err := os.OpenFile(filename+".keys", os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return nil, err
 	}
-	ks := &FileKeyStore{f: f}
-	if err := binary.Read(ks.f, binary.BigEndian, ks.FileStoreConfig); err != nil {
-		ks.Degree = degree
-		if err := binary.Write(ks.f, binary.BigEndian, ks.FileStoreConfig); err != nil {
-			return nil, err
-		}
-		if err := f.Sync(); err != nil {
-			return nil, err
-		}
-	} else {
-		if ks.Degree != degree {
-			return nil, fmt.Errorf("Cannot use file with different degree: %d file: %d", degree, ks.Degree)
-		}
-	}
-	return ks, nil
-}
-
-func (s *FileKeyStore) New(start, end Hash, degree uint64) (*Node, error) {
-	debugPrintln("File New:", start, end, degree)
-	n, err := s.f.Seek(0, os.SEEK_END)
+	fi, err := f.Stat()
 	if err != nil {
 		return nil, err
 	}
-	node := NewNode(start, end, NodeId(n), degree)
-	if err := node.MarshalBinary(s.f); err != nil {
-		return nil, err
+	if fi.Size()%NodeBlockSize != 0 {
+		// TODO: truncate instead?
+		return nil, fmt.Errorf("Corrupt key store")
 	}
-	if err := s.f.Sync(); err != nil {
+	return &FileKeyStore{f: f, length: fi.Size()}, nil
+}
+
+func (s *FileKeyStore) New(start, end Hash, degree uint64) (*Node, error) {
+	offset := atomic.AddInt64(&s.length, NodeBlockSize)
+	debugPrintln("File Key New:", offset)
+	node := NewNode(start, end, NodeId(offset), degree)
+	return node, nil
+}
+
+func (s *FileKeyStore) Get(id NodeId, degree uint64) (*Node, error) {
+	node := NewNode(FirstHash, LastHash, id, degree)
+	debugPrintln("File Key Get:", id)
+	r := io.NewSectionReader(s.f, int64(id), NodeBlockSize)
+	if err := node.UnmarshalBinary(r); err != nil {
 		return nil, err
 	}
 	return node, nil
 }
 
-func (s *FileKeyStore) Get(id NodeId, degree uint64) (*Node, error) {
-	debugPrintln("File Get:", id, degree)
-	if _, err := s.f.Seek(int64(id), os.SEEK_SET); err != nil {
-		return nil, err
-	}
-	node := NewNode(FirstHash, LastHash, id, degree)
-	err := node.UnmarshalBinary(s.f)
-	switch {
-	case err == io.EOF:
-		return nil, ErrNotFound
-	case err != nil:
-		return nil, err
-	default:
-		return node, nil
-	}
-}
-
 func (s *FileKeyStore) Set(node *Node) error {
-	debugPrintln("File Set:", node.Id)
-	if _, err := s.f.Seek(int64(node.Id), os.SEEK_SET); err != nil {
-		return err
-	}
-	if err := node.MarshalBinary(s.f); err != nil {
-		return err
-	}
-	return s.f.Sync()
+	debugPrintln("File Key Set:", node.Id)
+	w := ioutil2.NewSectionWriter(s.f, int64(node.Id), NodeBlockSize)
+	return node.MarshalBinary(w)
 }
 
 type FileValueStore struct {
@@ -104,17 +72,8 @@ func (s *FileValueStore) Append(key Hash, value []byte) (*KeyValue, error) {
 	if err != nil {
 		return nil, err
 	}
-	kv := &KeyValue{
-		Key: Key{
-			Hash: key,
-			Id:   ValueId(fi.Size()),
-		},
-		Value: value,
-	}
+	kv := NewKeyValue(ValueId(fi.Size()), key, value)
 	if err := kv.MarshalBinary(s.f); err != nil {
-		return nil, err
-	}
-	if err := s.f.Sync(); err != nil {
 		return nil, err
 	}
 	return kv, nil

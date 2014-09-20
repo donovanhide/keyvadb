@@ -39,6 +39,32 @@ func handleConnection(db *keyvadb.DB, conn net.Conn) {
 	for line, err := r.ReadString('\n'); err == nil; line, err = r.ReadString('\n') {
 		parts := strings.Split(line[:len(line)-1], ":")
 		switch {
+		case len(parts) == 1 && parts[0] == "dump":
+			count := 0
+			err := db.All(func(kv *keyvadb.KeyValue) {
+				w.WriteString(kv.String() + "\n")
+				count++
+			})
+			if err != nil {
+				w.WriteString(err.Error())
+			} else {
+				w.WriteString(fmt.Sprintf("End of dump: %d", count))
+			}
+			w.WriteByte('\n')
+			w.Flush()
+		case len(parts) == 1 && parts[0] == "range":
+			count := 0
+			err := db.Range(keyvadb.FirstHash, keyvadb.LastHash, func(kv *keyvadb.KeyValue) {
+				w.WriteString(kv.String() + "\n")
+				count++
+			})
+			if err != nil {
+				w.WriteString(err.Error())
+			} else {
+				w.WriteString(fmt.Sprintf("End of range: %d", count))
+			}
+			w.WriteByte('\n')
+			w.Flush()
 		case len(parts) == 1:
 			hash, err := keyvadb.NewHash(parts[0])
 			if err != nil {

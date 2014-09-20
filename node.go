@@ -196,10 +196,10 @@ func (n *Node) MarshalBinary(w io.Writer) error {
 	if err := binary.Write(w, binary.BigEndian, n.Start[:]); err != nil {
 		return err
 	}
-	if err := binary.Write(w, binary.BigEndian, n.Keys); err != nil {
+	if err := binary.Write(w, binary.BigEndian, n.End[:]); err != nil {
 		return err
 	}
-	if err := binary.Write(w, binary.BigEndian, n.End[:]); err != nil {
+	if err := binary.Write(w, binary.BigEndian, n.Keys); err != nil {
 		return err
 	}
 	return binary.Write(w, binary.BigEndian, n.Children)
@@ -209,10 +209,10 @@ func (n *Node) UnmarshalBinary(r io.Reader) error {
 	if err := binary.Read(r, binary.BigEndian, n.Start[:]); err != nil {
 		return err
 	}
-	if err := binary.Read(r, binary.BigEndian, n.Keys); err != nil {
+	if err := binary.Read(r, binary.BigEndian, n.End[:]); err != nil {
 		return err
 	}
-	if err := binary.Read(r, binary.BigEndian, n.End[:]); err != nil {
+	if err := binary.Read(r, binary.BigEndian, n.Keys); err != nil {
 		return err
 	}
 	return binary.Read(r, binary.BigEndian, n.Children)

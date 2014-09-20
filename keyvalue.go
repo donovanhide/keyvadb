@@ -10,6 +10,7 @@ type KeyValue struct {
 	Key
 	Value []byte
 }
+
 type KeyValueSlice []KeyValue
 
 func (s KeyValueSlice) Keys() KeySlice {
@@ -18,6 +19,16 @@ func (s KeyValueSlice) Keys() KeySlice {
 		k = append(k, kv.Key)
 	}
 	return k
+}
+
+func NewKeyValue(id ValueId, key Hash, value []byte) *KeyValue {
+	return &KeyValue{
+		Key: Key{
+			Hash: key,
+			Id:   id,
+		},
+		Value: value,
+	}
 }
 
 var lengthSize = binary.Size(uint64(0))

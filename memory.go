@@ -1,40 +1,40 @@
 package keyvadb
 
-type NodeCache map[NodeId]*Node
-type KeyValueCache []*KeyValue
+import (
+	"sync/atomic"
+)
 
 type MemoryKeyStore struct {
-	cache NodeCache
+	length uint64
+	cache  map[NodeId]*Node
 }
 
 type MemoryValueStore struct {
-	cache KeyValueCache
+	cache []*KeyValue
 }
 
 func NewMemoryKeyStore() KeyStore {
 	return &MemoryKeyStore{
-		cache: make(NodeCache),
+		cache: make(map[NodeId]*Node),
 	}
 }
 
 func (m *MemoryKeyStore) New(start, end Hash, degree uint64) (*Node, error) {
-	debugPrintln("Memory New:", start, end, degree)
-	id := rootNodeId + NodeId(len(m.cache))
+	id := NodeId(atomic.AddUint64(&m.length, 1))
+	debugPrintln("Memory New Key:", id)
 	node := NewNode(start, end, id, degree)
-	m.cache[node.Id] = node
 	return node, nil
 }
 
 func (m *MemoryKeyStore) Set(node *Node) error {
-	debugPrintln("Memory Set:", node.Id)
+	debugPrintln("Memory Set Key:", node.Id)
 	m.cache[node.Id] = node
 	return nil
 }
 
 func (m *MemoryKeyStore) Get(id NodeId, degree uint64) (*Node, error) {
-	debugPrintln("Memory Get:", id, degree)
+	debugPrintln("Memory Get Key:", id)
 	if node, ok := m.cache[id]; ok {
-		debugPrintln(node)
 		return node.Clone(), nil
 	}
 	return nil, ErrNotFound
@@ -45,13 +45,7 @@ func NewMemoryValueStore() ValueStore {
 }
 
 func (m *MemoryValueStore) Append(key Hash, value []byte) (*KeyValue, error) {
-	kv := &KeyValue{
-		Key: Key{
-			Id:   ValueId(len(m.cache)),
-			Hash: key,
-		},
-		Value: value,
-	}
+	kv := NewKeyValue(ValueId(len(m.cache)), key, value)
 	m.cache = append(m.cache, kv)
 	return kv, nil
 }
