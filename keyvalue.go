@@ -31,10 +31,21 @@ func NewKeyValue(id ValueId, key Hash, value []byte) *KeyValue {
 	}
 }
 
+func (kv *KeyValue) CloneKey() *Key {
+	return &Key{
+		Hash: kv.Hash,
+		Id:   kv.Id,
+	}
+}
+
 var lengthSize = binary.Size(uint64(0))
 
+func SizeOfKeyValue(value []byte) uint64 {
+	return uint64(lengthSize + SizeOfHash + len(value))
+}
+
 func (kv *KeyValue) MarshalBinary(w io.Writer) error {
-	length := uint64(len(kv.Key.Hash) + len(kv.Value) + lengthSize)
+	length := SizeOfKeyValue(kv.Value)
 	if err := binary.Write(w, binary.BigEndian, length); err != nil {
 		return err
 	}

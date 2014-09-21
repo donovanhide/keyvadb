@@ -18,28 +18,38 @@ type SimpleJournal struct {
 	previous []*Node
 }
 
-func (m *SimpleJournal) Swap(current, previous *Node) {
-	m.current = append(m.current, current)
-	m.previous = append(m.previous, previous)
+func (j *SimpleJournal) Len() int {
+	return len(j.current)
 }
 
-func (m *SimpleJournal) Commit() error {
-	for _, current := range m.current {
-		if err := m.keys.Set(current); err != nil {
+func (j *SimpleJournal) Swap(current, previous *Node) {
+	j.current = append(j.current, current)
+	j.previous = append(j.previous, previous)
+}
+
+func (j *SimpleJournal) Commit() error {
+	for _, current := range j.current {
+		if err := j.keys.Set(current); err != nil {
 			return err
 		}
 	}
-	m.current = m.current[:0]
-	m.previous = m.previous[:0]
+	j.current = j.current[:0]
+	j.previous = j.previous[:0]
 	return nil
 }
 
-func (m *SimpleJournal) String() string {
+func (j *SimpleJournal) String() string {
 	var s []string
-	for i := range m.current {
-		s = append(s, fmt.Sprintf("%08d:%03d:%03d", m.current[i].Id, m.previous[i].Occupancy(), m.current[i].Occupancy()))
+	for i := range j.current {
+		keyDelta := j.current[i].Occupancy() - j.previous[i].Occupancy()
+		childDelta := j.current[i].ChildCount() - j.previous[i].ChildCount()
+		s = append(s, fmt.Sprintf("%016d New Keys: %03d: New Children: %03d", j.current[i].Id, keyDelta, childDelta))
 	}
 	return dumpWithTitle("Journal", s, 0)
+}
+
+func (j *SimpleJournal) Close() error {
+	return nil
 }
 
 func NewFileJournal(name string, keys KeyStore, values ValueStore) (*FileJournal, error) {
@@ -51,6 +61,16 @@ type FileJournal struct {
 	*SimpleJournal
 }
 
+func (j *FileJournal) Close() error {
+	return nil
+}
+
 func (f *FileJournal) Commit() error {
-	return f.SimpleJournal.Commit()
+	if err := f.values.Sync(); err != nil {
+		return err
+	}
+	if err := f.SimpleJournal.Commit(); err != nil {
+		return err
+	}
+	return f.keys.Sync()
 }

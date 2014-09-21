@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"runtime"
 	"strings"
 
 	"github.com/donovanhide/keyvadb"
@@ -98,15 +101,34 @@ func handleConnection(db *keyvadb.DB, conn net.Conn) {
 	}
 }
 
-func main() {
-	flag.Parse()
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
-	checkErr(err)
-	db, err := keyvadb.NewFileDB(*degree, *batch, *balancer, *name)
-	checkErr(err)
+func accept(ln net.Listener, db *keyvadb.DB, done chan bool) {
 	for {
 		conn, err := ln.Accept()
-		checkErr(err)
+		if err != nil {
+			select {
+			case <-done:
+				return
+			default:
+				log.Fatalln(err)
+			}
+		}
 		go handleConnection(db, conn)
 	}
+}
+
+func main() {
+	flag.Parse()
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	db, err := keyvadb.NewFileDB(*degree, *batch, *balancer, *name)
+	checkErr(err)
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	checkErr(err)
+	done := make(chan bool, 1)
+	go accept(ln, db, done)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, os.Kill)
+	<-c
+	done <- true
+	checkErr(ln.Close())
+	checkErr(db.Close())
 }

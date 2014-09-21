@@ -53,8 +53,20 @@ func (s *FileKeyStore) Set(node *Node) error {
 	return node.MarshalBinary(w)
 }
 
+func (s *FileKeyStore) Close() error {
+	if err := s.f.Sync(); err != nil {
+		return err
+	}
+	return s.f.Close()
+}
+
+func (s *FileKeyStore) Sync() error {
+	return s.f.Sync()
+}
+
 type FileValueStore struct {
-	f *os.File
+	f      *os.File
+	length int64
 }
 
 func NewFileValueStore(filename string) (ValueStore, error) {
@@ -62,17 +74,20 @@ func NewFileValueStore(filename string) (ValueStore, error) {
 	if err != nil {
 		return nil, err
 	}
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
 	return &FileValueStore{
-		f: f,
+		f:      f,
+		length: fi.Size(),
 	}, nil
 }
 
 func (s *FileValueStore) Append(key Hash, value []byte) (*KeyValue, error) {
-	fi, err := s.f.Stat()
-	if err != nil {
-		return nil, err
-	}
-	kv := NewKeyValue(ValueId(fi.Size()), key, value)
+	length := int64(SizeOfKeyValue(value))
+	id := ValueId(atomic.AddInt64(&s.length, length) - length)
+	kv := NewKeyValue(id, key, value)
 	if err := kv.MarshalBinary(s.f); err != nil {
 		return nil, err
 	}
@@ -80,27 +95,36 @@ func (s *FileValueStore) Append(key Hash, value []byte) (*KeyValue, error) {
 }
 
 func (s *FileValueStore) Get(id ValueId) (*KeyValue, error) {
-	if _, err := s.f.Seek(int64(id), os.SEEK_SET); err != nil {
-		return nil, err
-	}
+	r := io.NewSectionReader(s.f, int64(id), 1<<63-1)
 	var kv KeyValue
-	if err := kv.UnmarshalBinary(s.f); err != nil {
+	if err := kv.UnmarshalBinary(r); err != nil {
 		return nil, err
 	}
 	return &kv, nil
 }
 
 func (s *FileValueStore) Each(f func(*KeyValue)) error {
-	r, err := os.Open(s.f.Name())
-	if err != nil {
+	r := io.NewSectionReader(s.f, 0, 1<<63-1)
+	var kv KeyValue
+	for err := kv.UnmarshalBinary(r); ; err = kv.UnmarshalBinary(r) {
+		switch {
+		case err == io.EOF:
+			return nil
+		case err != nil:
+			return err
+		default:
+			f(&kv)
+		}
+	}
+}
+
+func (s *FileValueStore) Sync() error {
+	return s.f.Sync()
+}
+
+func (s *FileValueStore) Close() error {
+	if err := s.f.Sync(); err != nil {
 		return err
 	}
-	var kv KeyValue
-	for err = kv.UnmarshalBinary(r); err != nil; err = kv.UnmarshalBinary(r) {
-		f(&kv)
-	}
-	if err == io.EOF {
-		return nil
-	}
-	return err
+	return s.f.Close()
 }

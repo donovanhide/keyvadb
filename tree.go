@@ -28,18 +28,20 @@ func NewTree(degree uint64, keys KeyStore, balancer Balancer) (*Tree, error) {
 	}, nil
 }
 
-func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
-	if len(v) == 0 {
+func (t *Tree) add(n *Node, keys KeySlice, journal Journal) (insertions int, err error) {
+	if len(keys) == 0 {
 		panic("no values to add")
 	}
 	debugPrintln(n)
-	remainder, dirty := t.balancer.Balance(n, v)
+	// TODO: make copy lazy in balancer!
+	current := n.Clone()
+	remainder, dirty := t.balancer.Balance(current, keys)
 	debugPrintln(n)
-	insertions = len(v) - len(remainder)
+	insertions = len(keys) - len(remainder)
 	if *debug && !n.SanityCheck() {
 		panic(fmt.Sprintf("not sane:\n%s", n))
 	}
-	err = n.Each(func(id NodeId, start, end Hash) (NodeId, error) {
+	err = current.Each(func(id NodeId, start, end Hash) (NodeId, error) {
 		candidates := remainder.GetRange(start, end)
 		if len(candidates) == 0 {
 			return id, nil
@@ -56,7 +58,7 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 				return id, err
 			}
 		}
-		childInsertions, err := t.add(child, candidates)
+		childInsertions, err := t.add(child, candidates, journal)
 		insertions += childInsertions
 		return id, err
 	})
@@ -64,13 +66,14 @@ func (t *Tree) add(n *Node, v KeySlice) (insertions int, err error) {
 		return
 	}
 	if dirty {
-		err = t.keys.Set(n)
+		journal.Swap(current, n)
+		// err = t.keys.Set(current)
 	}
 	return
 }
 
 // Returns number of keys inserted and an error if encountered
-func (t *Tree) Add(keys KeySlice) (int, error) {
+func (t *Tree) Add(keys KeySlice, journal Journal) (int, error) {
 	if !keys.IsSorted() {
 		return 0, fmt.Errorf("unsorted values provided")
 	}
@@ -83,7 +86,7 @@ func (t *Tree) Add(keys KeySlice) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("cannot get root node: %s", err.Error())
 	}
-	return t.add(root, unique)
+	return t.add(root, unique, journal)
 }
 
 type WalkFunc func(key *Key) error

@@ -4,24 +4,30 @@ import . "gopkg.in/check.v1"
 
 func (s *KeyVaSuite) TestTree(c *C) {
 	for _, b := range Balancers {
-		ks := NewMemoryKeyStore()
+		keys := NewMemoryKeyStore()
+		values := NewMemoryValueStore()
 		msg := Commentf(b.Name)
 		var allKeys KeySlice
-		tree, err := NewTree(8, ks, b.Balancer)
+		tree, err := NewTree(8, keys, b.Balancer)
 		c.Assert(err, IsNil, msg)
 		batch := 1000
 		rounds := 10
 		gen := NewRandomValueGenerator(10, 50, s.R)
 		sum := 0
+		journal := NewSimpleJournal("test", keys, values)
 		for i := 0; i < rounds; i++ {
 			kv, err := gen.Take(batch)
 			c.Assert(err, IsNil, msg)
 			keys := kv.Keys()
 			keys.Sort()
 			allKeys = append(allKeys, keys...)
-			n, err := tree.Add(keys)
+			n, err := tree.Add(keys, journal)
 			c.Assert(err, IsNil, msg)
 			c.Assert(n, Equals, len(keys), msg)
+			c.Assert(journal.Len(), Not(Equals), 0)
+			// c.Log(journal)
+			c.Assert(journal.Commit(), IsNil)
+			c.Assert(journal.Len(), Equals, 0)
 			sum += n
 			summary, err := NewSummary(tree)
 			c.Assert(err, IsNil, msg)
@@ -29,7 +35,7 @@ func (s *KeyVaSuite) TestTree(c *C) {
 			// c.Assert(tree.Dump(os.Stdout), IsNil)
 			c.Assert(summary.Total.NonSyntheticEntries(), Equals, uint64(sum), msg)
 			// Add them again
-			n, err = tree.Add(keys)
+			n, err = tree.Add(keys, journal)
 			c.Assert(err, IsNil, msg)
 			c.Assert(n, Equals, batch, msg)
 		}

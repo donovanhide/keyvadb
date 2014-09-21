@@ -40,6 +40,14 @@ func (m *MemoryKeyStore) Get(id NodeId, degree uint64) (*Node, error) {
 	return nil, ErrNotFound
 }
 
+func (m *MemoryKeyStore) Sync() error {
+	return nil
+}
+
+func (m *MemoryKeyStore) Close() error {
+	return nil
+}
+
 func NewMemoryValueStore() ValueStore {
 	return &MemoryValueStore{}
 }
@@ -61,5 +69,13 @@ func (m *MemoryValueStore) Each(f func(*KeyValue)) error {
 	for _, v := range m.cache {
 		f(v)
 	}
+	return nil
+}
+
+func (m *MemoryValueStore) Close() error {
+	return nil
+}
+
+func (m *MemoryValueStore) Sync() error {
 	return nil
 }
