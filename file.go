@@ -42,7 +42,7 @@ func (s *FileKeyStore) Get(id NodeId, degree uint64) (*Node, error) {
 	node := NewNode(FirstHash, LastHash, id, degree)
 	debugPrintln("File Key Get:", id)
 	r := io.NewSectionReader(s.f, int64(id), NodeBlockSize)
-	if err := node.UnmarshalBinary(r); err != nil {
+	if _, err := node.ReadFrom(r); err != nil {
 		return nil, err
 	}
 	return node, nil
@@ -51,7 +51,8 @@ func (s *FileKeyStore) Get(id NodeId, degree uint64) (*Node, error) {
 func (s *FileKeyStore) Set(node *Node) error {
 	debugPrintln("File Key Set:", node.Id)
 	w := ioutil2.NewSectionWriter(s.f, int64(node.Id), NodeBlockSize)
-	return node.MarshalBinary(w)
+	_, err := node.WriteTo(w)
+	return err
 }
 
 func (s *FileKeyStore) Close() error {

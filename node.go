@@ -192,28 +192,38 @@ func (n *Node) Swap(i, j int) {
 func (n *Node) Sort()          { sort.Sort(n) }
 func (n *Node) IsSorted() bool { return sort.IsSorted(n) }
 
-func (n *Node) MarshalBinary(w io.Writer) error {
-	if err := binary.Write(w, binary.BigEndian, n.Start[:]); err != nil {
-		return err
+func (node *Node) WriteTo(w io.Writer) (int64, error) {
+	b := make([]byte, NodeBlockSize)
+	n := copy(b, node.Start[:])
+	n += copy(b[n:], node.End[:])
+	for _, key := range node.Keys {
+		n += copy(b[n:], key.Hash[:])
+		binary.BigEndian.PutUint64(b[n:], uint64(key.Id))
+		n += 8
 	}
-	if err := binary.Write(w, binary.BigEndian, n.End[:]); err != nil {
-		return err
+	for _, child := range node.Children {
+		binary.BigEndian.PutUint64(b[n:], uint64(child))
+		n += 8
 	}
-	if err := binary.Write(w, binary.BigEndian, n.Keys); err != nil {
-		return err
-	}
-	return binary.Write(w, binary.BigEndian, n.Children)
+	n, err := w.Write(b)
+	return int64(n), err
 }
 
-func (n *Node) UnmarshalBinary(r io.Reader) error {
-	if err := binary.Read(r, binary.BigEndian, n.Start[:]); err != nil {
-		return err
+func (node *Node) ReadFrom(r io.Reader) (int64, error) {
+	b := make([]byte, NodeBlockSize)
+	if n, err := r.Read(b); err != nil {
+		return int64(n), err
 	}
-	if err := binary.Read(r, binary.BigEndian, n.End[:]); err != nil {
-		return err
+	n := copy(node.Start[:], b)
+	n += copy(node.End[:], b[n:])
+	for i := range node.Keys {
+		n += copy(node.Keys[i].Hash[:], b[n:])
+		node.Keys[i].Id = ValueId(binary.BigEndian.Uint64(b[n:]))
+		n += 8
 	}
-	if err := binary.Read(r, binary.BigEndian, n.Keys); err != nil {
-		return err
+	for i := range node.Children {
+		node.Children[i] = NodeId(binary.BigEndian.Uint64(b[n:]))
+		n += 8
 	}
-	return binary.Read(r, binary.BigEndian, n.Children)
+	return NodeBlockSize, nil
 }
