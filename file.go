@@ -1,7 +1,6 @@
 package keyvadb
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -90,11 +89,7 @@ func (s *FileValueStore) Append(key Hash, value []byte) (*KeyValue, error) {
 	length := int64(SizeOfKeyValue(value))
 	id := ValueId(atomic.AddInt64(&s.length, length) - length)
 	kv := NewKeyValue(id, key, value)
-	w := bufio.NewWriter(s.f)
-	if err := kv.MarshalBinary(w); err != nil {
-		return nil, err
-	}
-	if err := w.Flush(); err != nil {
+	if _, err := kv.WriteTo(s.f); err != nil {
 		return nil, err
 	}
 	return kv, nil
@@ -104,7 +99,7 @@ func (s *FileValueStore) Get(id ValueId) (*KeyValue, error) {
 	length := atomic.LoadInt64(&s.length)
 	r := io.NewSectionReader(s.f, int64(id), length)
 	var kv KeyValue
-	if err := kv.UnmarshalBinary(r); err != nil {
+	if _, err := kv.ReadFrom(r); err != nil {
 		return nil, err
 	}
 	return &kv, nil
@@ -114,7 +109,7 @@ func (s *FileValueStore) Each(f func(*KeyValue)) error {
 	length := atomic.LoadInt64(&s.length)
 	r := io.NewSectionReader(s.f, 0, length)
 	var kv KeyValue
-	for err := kv.UnmarshalBinary(r); ; err = kv.UnmarshalBinary(r) {
+	for _, err := kv.ReadFrom(r); ; _, err = kv.ReadFrom(r) {
 		switch {
 		case err == io.EOF:
 			return nil

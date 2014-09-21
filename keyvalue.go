@@ -44,27 +44,29 @@ func SizeOfKeyValue(value []byte) uint64 {
 	return uint64(lengthSize + SizeOfHash + len(value))
 }
 
-func (kv *KeyValue) MarshalBinary(w io.Writer) error {
+func (kv *KeyValue) WriteTo(w io.Writer) (int64, error) {
 	length := SizeOfKeyValue(kv.Value)
-	if err := binary.Write(w, binary.BigEndian, length); err != nil {
-		return err
-	}
-	if err := binary.Write(w, binary.BigEndian, kv.Key.Hash); err != nil {
-		return err
-	}
-	return binary.Write(w, binary.BigEndian, kv.Value)
+	b := make([]byte, length)
+	binary.BigEndian.PutUint64(b, length)
+	pos := 8
+	pos += copy(b[pos:], kv.Hash[:])
+	pos += copy(b[pos:], kv.Value)
+	n, err := w.Write(b)
+	return int64(n), err
 }
 
-func (kv *KeyValue) UnmarshalBinary(r io.Reader) error {
+func (kv *KeyValue) ReadFrom(r io.Reader) (int64, error) {
 	var length uint64
 	if err := binary.Read(r, binary.BigEndian, &length); err != nil {
-		return err
+		return int64(lengthSize), err
 	}
-	if err := binary.Read(r, binary.BigEndian, &kv.Hash); err != nil {
-		return err
+	n, err := r.Read(kv.Hash[:])
+	if err != nil {
+		return int64(lengthSize + n), err
 	}
-	kv.Value = make([]byte, int(length)-len(kv.Hash)-lengthSize)
-	return binary.Read(r, binary.BigEndian, &kv.Value)
+	kv.Value = make([]byte, int(length)-n-lengthSize)
+	n, err = r.Read(kv.Value)
+	return int64(lengthSize + HashSize + n), err
 }
 
 func (kv *KeyValue) String() string {
