@@ -1,6 +1,7 @@
 package keyvadb
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/golang/glog"
@@ -53,7 +54,7 @@ type DB struct {
 	tree     *Tree
 	buffer   *Buffer
 	flushing chan bool
-	lastsync time.Duration
+	lastsync int64
 }
 
 func newDB(conf *DBConfig) (*DB, error) {
@@ -92,7 +93,8 @@ func (db *DB) Add(key Hash, value []byte) error {
 	}
 	if length := db.buffer.Add(kv.CloneKey()); length > db.batch {
 		//throttle
-		time.Sleep(db.lastsync / time.Duration(db.batch) / 2)
+		wait := time.Duration(atomic.LoadInt64(&db.lastsync)) / time.Duration(db.batch) / 2
+		time.Sleep(wait)
 	}
 	return nil
 }
@@ -140,9 +142,9 @@ func (db *DB) flush() {
 	}
 	db.buffer.Remove(keys)
 	db.flushing <- false
-	db.lastsync = time.Now().Sub(start)
-	secs := db.lastsync.Seconds()
-	glog.Infof("Flushed %d keys in %0.2f secs %02.f keys/sec", len(keys), secs, float64(len(keys))/secs)
+	duration := time.Now().Sub(start)
+	atomic.StoreInt64(&db.lastsync, int64(duration))
+	glog.Infof("Flushed %d keys in %0.2f secs %02.f keys/sec", len(keys), duration.Seconds(), float64(len(keys))/duration.Seconds())
 }
 
 type KeyValueFunc func(*KeyValue)
