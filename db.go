@@ -93,7 +93,7 @@ func (db *DB) Add(key Hash, value []byte) error {
 	}
 	if length := db.buffer.Add(kv.CloneKey()); length > db.batch {
 		//throttle
-		wait := time.Duration(atomic.LoadInt64(&db.lastsync)) / time.Duration(db.batch) / 2
+		wait := time.Duration(atomic.LoadInt64(&db.lastsync)) / time.Duration(db.batch)
 		time.Sleep(wait)
 	}
 	return nil
