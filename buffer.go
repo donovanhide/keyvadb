@@ -13,14 +13,6 @@ func NewBuffer(size uint64) *Buffer {
 	}
 }
 
-func (b *Buffer) Add(key *Key) uint64 {
-	b.Lock()
-	b.m[key.Hash] = key
-	length := uint64(len(b.m))
-	b.Unlock()
-	return length
-}
-
 func (b *Buffer) Get(hash Hash) *Key {
 	b.RLock()
 	key := b.m[hash]
@@ -36,6 +28,21 @@ func (b *Buffer) Keys() KeySlice {
 	}
 	b.RUnlock()
 	return keys
+}
+
+func (b *Buffer) Len() int {
+	b.RLock()
+	length := len(b.m)
+	b.RUnlock()
+	return length
+}
+
+func (b *Buffer) Add(key *Key) uint64 {
+	b.Lock()
+	b.m[key.Hash] = key
+	length := uint64(len(b.m))
+	b.Unlock()
+	return length
 }
 
 func (b *Buffer) Remove(keys KeySlice) {

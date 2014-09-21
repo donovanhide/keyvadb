@@ -95,7 +95,8 @@ func (s *FileValueStore) Append(key Hash, value []byte) (*KeyValue, error) {
 }
 
 func (s *FileValueStore) Get(id ValueId) (*KeyValue, error) {
-	r := io.NewSectionReader(s.f, int64(id), 1<<63-1)
+	length := atomic.LoadInt64(&s.length)
+	r := io.NewSectionReader(s.f, int64(id), length)
 	var kv KeyValue
 	if err := kv.UnmarshalBinary(r); err != nil {
 		return nil, err
@@ -104,7 +105,8 @@ func (s *FileValueStore) Get(id ValueId) (*KeyValue, error) {
 }
 
 func (s *FileValueStore) Each(f func(*KeyValue)) error {
-	r := io.NewSectionReader(s.f, 0, 1<<63-1)
+	length := atomic.LoadInt64(&s.length)
+	r := io.NewSectionReader(s.f, 0, length)
 	var kv KeyValue
 	for err := kv.UnmarshalBinary(r); ; err = kv.UnmarshalBinary(r) {
 		switch {

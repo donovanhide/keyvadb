@@ -67,7 +67,6 @@ func (t *Tree) add(n *Node, keys KeySlice, journal Journal) (insertions int, err
 	}
 	if dirty {
 		journal.Swap(current, n)
-		// err = t.keys.Set(current)
 	}
 	return
 }
@@ -123,10 +122,18 @@ func (t *Tree) Walk(start, end Hash, f WalkFunc) error {
 
 func (t *Tree) Get(hash Hash) (*Key, error) {
 	var result *Key
-	return result, t.walk(RootNode, hash, hash, func(key *Key) error {
+	err := t.walk(RootNode, hash, hash, func(key *Key) error {
 		result = key
 		return nil
 	})
+	switch {
+	case err != nil:
+		return nil, err
+	case result == nil:
+		return nil, ErrNotFound
+	default:
+		return result, nil
+	}
 }
 
 func (t *Tree) each(id NodeId, level int, f NodeFunc) error {

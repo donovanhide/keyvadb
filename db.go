@@ -1,6 +1,10 @@
 package keyvadb
 
-import "github.com/golang/glog"
+import (
+	"time"
+
+	"github.com/golang/glog"
+)
 
 func NewMemoryDB(degree, batch uint64, balancer string) (*DB, error) {
 	keys, values := NewMemoryKeyStore(), NewMemoryValueStore()
@@ -48,8 +52,7 @@ type DB struct {
 	*DBConfig
 	tree     *Tree
 	buffer   *Buffer
-	incoming chan *Key
-	flushed  chan bool
+	flushing chan bool
 }
 
 func newDB(conf *DBConfig) (*DB, error) {
@@ -64,11 +67,10 @@ func newDB(conf *DBConfig) (*DB, error) {
 	db := &DB{
 		tree:     tree,
 		buffer:   NewBuffer(conf.batch),
-		incoming: make(chan *Key, conf.batch*2),
-		flushed:  make(chan (bool), 1),
+		flushing: make(chan (bool), 1),
 		DBConfig: conf,
 	}
-	go db.run()
+	go db.flusher()
 	return db, nil
 }
 
@@ -87,7 +89,7 @@ func (db *DB) Add(key Hash, value []byte) error {
 	if err != nil {
 		return err
 	}
-	db.incoming <- kv.CloneKey()
+	db.buffer.Add(kv.CloneKey())
 	return nil
 }
 
@@ -102,15 +104,15 @@ func (db *DB) Get(hash Hash) (*KeyValue, error) {
 	return db.values.Get(key.Id)
 }
 
-func (db *DB) run() {
-	flushed := true
+func (db *DB) flusher() {
+	flushing := false
+	tick := time.NewTicker(time.Second)
 	for {
 		select {
-		case flushed = <-db.flushed:
-			//flushing updated
-		case key := <-db.incoming:
-			if n := db.buffer.Add(key); n >= db.batch && flushed {
-				flushed = false
+		case flushing = <-db.flushing:
+			// flushing set
+		case <-tick.C:
+			if !flushing && uint64(db.buffer.Len()) >= db.batch {
 				go db.flush()
 			}
 		}
@@ -131,7 +133,7 @@ func (db *DB) flush() {
 		glog.Fatalf("Commit Error: %s Closing with result: %+v", err, db.Close())
 	}
 	db.buffer.Remove(keys)
-	db.flushed <- true
+	db.flushing <- false
 }
 
 type KeyValueFunc func(*KeyValue)
