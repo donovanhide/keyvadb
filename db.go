@@ -53,6 +53,7 @@ type DB struct {
 	tree     *Tree
 	buffer   *Buffer
 	flushing chan bool
+	lastsync time.Duration
 }
 
 func newDB(conf *DBConfig) (*DB, error) {
@@ -91,7 +92,7 @@ func (db *DB) Add(key Hash, value []byte) error {
 	}
 	if length := db.buffer.Add(kv.CloneKey()); length > db.batch {
 		//throttle
-		time.Sleep(time.Second / time.Duration(db.batch))
+		time.Sleep(db.lastsync / time.Duration(db.batch) / 2)
 	}
 	return nil
 }
@@ -139,7 +140,8 @@ func (db *DB) flush() {
 	}
 	db.buffer.Remove(keys)
 	db.flushing <- false
-	secs := time.Now().Sub(start).Seconds()
+	db.lastsync = time.Now().Sub(start)
+	secs := db.lastsync.Seconds()
 	glog.Infof("Flushed %d keys in %0.2f secs %02.f keys/sec", len(keys), secs, float64(len(keys))/secs)
 }
 

@@ -1,6 +1,7 @@
 package keyvadb
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -70,7 +71,7 @@ type FileValueStore struct {
 }
 
 func NewFileValueStore(filename string) (ValueStore, error) {
-	f, err := os.OpenFile(filename+".values", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	f, err := os.OpenFile(filename+".values", os.O_RDWR|os.O_CREATE|os.O_APPEND|os.O_SYNC, 0666)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +89,11 @@ func (s *FileValueStore) Append(key Hash, value []byte) (*KeyValue, error) {
 	length := int64(SizeOfKeyValue(value))
 	id := ValueId(atomic.AddInt64(&s.length, length) - length)
 	kv := NewKeyValue(id, key, value)
-	if err := kv.MarshalBinary(s.f); err != nil {
+	w := bufio.NewWriter(s.f)
+	if err := kv.MarshalBinary(w); err != nil {
+		return nil, err
+	}
+	if err := w.Flush(); err != nil {
 		return nil, err
 	}
 	return kv, nil

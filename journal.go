@@ -66,9 +66,6 @@ func (j *FileJournal) Close() error {
 }
 
 func (f *FileJournal) Commit() error {
-	if err := f.values.Sync(); err != nil {
-		return err
-	}
 	if err := f.SimpleJournal.Commit(); err != nil {
 		return err
 	}

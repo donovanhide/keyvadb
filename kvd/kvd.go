@@ -18,8 +18,8 @@ import (
 )
 
 var port = flag.Int("port", 9000, "port to listen on")
-var degree = flag.Uint64("degree", 64, "degree of tree")
-var batch = flag.Uint64("batch", 1000, "batch size")
+var degree = flag.Uint64("degree", 84, "degree of tree")
+var batch = flag.Uint64("batch", 10000, "batch size")
 var name = flag.String("name", "db", "name of database")
 var balancer = flag.String("balancer", "Distance", "balancer to use")
 
