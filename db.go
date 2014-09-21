@@ -89,7 +89,10 @@ func (db *DB) Add(key Hash, value []byte) error {
 	if err != nil {
 		return err
 	}
-	db.buffer.Add(kv.CloneKey())
+	if length := db.buffer.Add(kv.CloneKey()); length > db.batch {
+		//throttle
+		time.Sleep(time.Second / time.Duration(db.batch))
+	}
 	return nil
 }
 
@@ -113,6 +116,7 @@ func (db *DB) flusher() {
 			// flushing set
 		case <-tick.C:
 			if !flushing && uint64(db.buffer.Len()) >= db.batch {
+				flushing = true
 				go db.flush()
 			}
 		}
@@ -120,6 +124,7 @@ func (db *DB) flusher() {
 }
 
 func (db *DB) flush() {
+	start := time.Now()
 	keys := db.buffer.Keys()
 	keys.Sort()
 	n, err := db.tree.Add(keys, db.journal)
@@ -134,6 +139,8 @@ func (db *DB) flush() {
 	}
 	db.buffer.Remove(keys)
 	db.flushing <- false
+	secs := time.Now().Sub(start).Seconds()
+	glog.Infof("Flushed %d keys in %0.2f secs %02.f keys/sec", len(keys), secs, float64(len(keys))/secs)
 }
 
 type KeyValueFunc func(*KeyValue)

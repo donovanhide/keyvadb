@@ -12,6 +12,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/golang/glog"
+
 	"github.com/donovanhide/keyvadb"
 )
 
@@ -79,7 +81,7 @@ func handleConnection(db *keyvadb.DB, conn net.Conn) {
 				writeErr(w, err)
 				continue
 			}
-			log.Printf("Get: %s", hash)
+			glog.V(2).Infof("Get: %s", hash)
 			w.WriteString(fmt.Sprintf("%s:%X\n", kv.Hash, kv.Value))
 			w.Flush()
 		case len(parts) == 2:
@@ -93,7 +95,7 @@ func handleConnection(db *keyvadb.DB, conn net.Conn) {
 				writeErr(w, err)
 				continue
 			}
-			log.Printf("Add: %s Bytes:%d", hash, len(value))
+			glog.V(2).Infof("Add: %s Bytes:%d", hash, len(value))
 			if err := db.Add(*hash, value); err != nil {
 				writeErr(w, err)
 			}
