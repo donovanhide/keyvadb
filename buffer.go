@@ -14,10 +14,10 @@ func NewBuffer(size uint64) *Buffer {
 }
 
 func (b *Buffer) Add(key *Key) uint64 {
-	b.RLock()
+	b.Lock()
 	b.m[key.Hash] = key
 	length := uint64(len(b.m))
-	b.RUnlock()
+	b.Unlock()
 	return length
 }
 
