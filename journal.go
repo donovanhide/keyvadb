@@ -2,6 +2,23 @@ package keyvadb
 
 import "fmt"
 
+type Delta struct {
+	current  *Node
+	previous *Node
+}
+
+func (d *Delta) NewKeys() int {
+	return d.current.Occupancy() - d.previous.Occupancy()
+}
+
+func (d *Delta) NewChildren() int {
+	return d.current.ChildCount() - d.previous.ChildCount()
+}
+
+func (d *Delta) String() string {
+	return fmt.Sprintf("%016d New Keys: %03d: New Children: %03d", d.current.Id, d.NewKeys(), d.NewChildren())
+}
+
 func NewSimpleJournal(name string, keys KeyStore, values ValueStore) *SimpleJournal {
 	return &SimpleJournal{
 		name:   name,
@@ -11,41 +28,32 @@ func NewSimpleJournal(name string, keys KeyStore, values ValueStore) *SimpleJour
 }
 
 type SimpleJournal struct {
-	name     string
-	keys     KeyStore
-	values   ValueStore
-	current  []*Node
-	previous []*Node
+	name   string
+	keys   KeyStore
+	values ValueStore
+	deltas []Delta
 }
 
 func (j *SimpleJournal) Len() int {
-	return len(j.current)
+	return len(j.deltas)
 }
 
 func (j *SimpleJournal) Swap(current, previous *Node) {
-	j.current = append(j.current, current)
-	j.previous = append(j.previous, previous)
+	j.deltas = append(j.deltas, Delta{current, previous})
 }
 
 func (j *SimpleJournal) Commit() error {
-	for _, current := range j.current {
-		if err := j.keys.Set(current); err != nil {
+	for _, delta := range j.deltas {
+		if err := j.keys.Set(delta.current); err != nil {
 			return err
 		}
 	}
-	j.current = j.current[:0]
-	j.previous = j.previous[:0]
+	j.deltas = nil
 	return nil
 }
 
 func (j *SimpleJournal) String() string {
-	var s []string
-	for i := range j.current {
-		keyDelta := j.current[i].Occupancy() - j.previous[i].Occupancy()
-		childDelta := j.current[i].ChildCount() - j.previous[i].ChildCount()
-		s = append(s, fmt.Sprintf("%016d New Keys: %03d: New Children: %03d", j.current[i].Id, keyDelta, childDelta))
-	}
-	return dumpWithTitle("Journal", s, 0)
+	return dumpWithTitle("Journal", j.deltas, 0)
 }
 
 func (j *SimpleJournal) Close() error {
