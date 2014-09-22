@@ -28,6 +28,7 @@ func (m *MemoryKeyStore) New(start, end Hash, degree uint64) (*Node, error) {
 
 func (m *MemoryKeyStore) Set(node *Node) error {
 	debugPrintln("Memory Set Key:", node.Id)
+	node.Dirty = false
 	m.cache[node.Id] = node
 	return nil
 }
