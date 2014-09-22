@@ -69,7 +69,7 @@ func (s *FileKeyStore) Get(id NodeId, degree uint64) (*Node, error) {
 
 func (s *FileKeyStore) Set(node *Node) error {
 	debugPrintln("File Key Set:", node.Id)
-	// s.cache.Set(node)
+	s.cache.Set(node)
 	w := ioutil2.NewSectionWriter(s.f, int64(node.Id), NodeBlockSize)
 	_, err := node.WriteTo(w)
 	return err
