@@ -4,23 +4,19 @@ import (
 	"sync/atomic"
 )
 
-type MemoryKeyStore struct {
-	length uint64
-	cache  map[NodeId]*Node
-}
-
-type MemoryValueStore struct {
-	cache []*KeyValue
-}
-
 func NewMemoryKeyStore() KeyStore {
 	return &MemoryKeyStore{
 		cache: make(map[NodeId]*Node),
 	}
 }
 
+type MemoryKeyStore struct {
+	length int64
+	cache  map[NodeId]*Node
+}
+
 func (m *MemoryKeyStore) New(start, end Hash, degree uint64) (*Node, error) {
-	id := NodeId(atomic.AddUint64(&m.length, 1))
+	id := NodeId(atomic.AddInt64(&m.length, 1))
 	debugPrintln("Memory New Key:", id)
 	node := NewNode(start, end, id, degree)
 	return node, nil
@@ -28,7 +24,6 @@ func (m *MemoryKeyStore) New(start, end Hash, degree uint64) (*Node, error) {
 
 func (m *MemoryKeyStore) Set(node *Node) error {
 	debugPrintln("Memory Set Key:", node.Id)
-	node.Dirty = false
 	m.cache[node.Id] = node
 	return nil
 }
@@ -49,12 +44,22 @@ func (m *MemoryKeyStore) Close() error {
 	return nil
 }
 
+func (m *MemoryKeyStore) Length() int64 {
+	return atomic.LoadInt64(&m.length)
+}
+
 func NewMemoryValueStore() ValueStore {
 	return &MemoryValueStore{}
 }
 
+type MemoryValueStore struct {
+	length int64
+	cache  []*KeyValue
+}
+
 func (m *MemoryValueStore) Append(key Hash, value []byte) (*KeyValue, error) {
-	kv := NewKeyValue(ValueId(len(m.cache)), key, value)
+	id := ValueId(atomic.AddInt64(&m.length, 1) - 1)
+	kv := NewKeyValue(id, key, value)
 	m.cache = append(m.cache, kv)
 	return kv, nil
 }
@@ -79,4 +84,8 @@ func (m *MemoryValueStore) Close() error {
 
 func (m *MemoryValueStore) Sync() error {
 	return nil
+}
+
+func (m *MemoryValueStore) Length() int64 {
+	return atomic.LoadInt64(&m.length)
 }

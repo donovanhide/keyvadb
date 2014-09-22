@@ -6,13 +6,9 @@ import (
 	"os"
 	"sync/atomic"
 
+	"github.com/dustin/go-humanize"
 	"github.com/siddontang/go/ioutil2"
 )
-
-type FileKeyStore struct {
-	f      *os.File
-	length int64
-}
 
 func NewFileKeyStore(degree uint64, filename string) (KeyStore, error) {
 	f, err := os.OpenFile(filename+".keys", os.O_CREATE|os.O_RDWR, 0666)
@@ -27,7 +23,26 @@ func NewFileKeyStore(degree uint64, filename string) (KeyStore, error) {
 		// TODO: truncate instead?
 		return nil, fmt.Errorf("Corrupt key store")
 	}
-	return &FileKeyStore{f: f, length: fi.Size()}, nil
+	cacheSize := int(1 + degree + degree*degree) // Enough for top three levels
+	return &FileKeyStore{
+		f:      f,
+		length: fi.Size(),
+		cache:  NewCache(cacheSize),
+	}, nil
+}
+
+type FileKeyStore struct {
+	f      *os.File
+	length int64
+	cache  *Cache
+}
+
+func (s *FileKeyStore) Length() int64 {
+	return atomic.LoadInt64(&s.length)
+}
+
+func (s *FileKeyStore) String() string {
+	return fmt.Sprintf("Keys: %s %s", humanize.Bytes(uint64(s.Length())), s.cache)
 }
 
 func (s *FileKeyStore) New(start, end Hash, degree uint64) (*Node, error) {
@@ -38,6 +53,9 @@ func (s *FileKeyStore) New(start, end Hash, degree uint64) (*Node, error) {
 }
 
 func (s *FileKeyStore) Get(id NodeId, degree uint64) (*Node, error) {
+	if node := s.cache.Get(id); node != nil {
+		return node, nil
+	}
 	node := NewNode(FirstHash, LastHash, id, degree)
 	debugPrintln("File Key Get:", id)
 	r := io.NewSectionReader(s.f, int64(id), NodeBlockSize)
@@ -49,6 +67,7 @@ func (s *FileKeyStore) Get(id NodeId, degree uint64) (*Node, error) {
 
 func (s *FileKeyStore) Set(node *Node) error {
 	debugPrintln("File Key Set:", node.Id)
+	s.cache.Set(node)
 	w := ioutil2.NewSectionWriter(s.f, int64(node.Id), NodeBlockSize)
 	_, err := node.WriteTo(w)
 	return err
@@ -63,11 +82,6 @@ func (s *FileKeyStore) Close() error {
 
 func (s *FileKeyStore) Sync() error {
 	return s.f.Sync()
-}
-
-type FileValueStore struct {
-	f      *os.File
-	length int64
 }
 
 func NewFileValueStore(filename string) (ValueStore, error) {
@@ -85,9 +99,23 @@ func NewFileValueStore(filename string) (ValueStore, error) {
 	}, nil
 }
 
+type FileValueStore struct {
+	f      *os.File
+	length int64
+}
+
+func (s *FileValueStore) Length() int64 {
+	return atomic.LoadInt64(&s.length)
+}
+
+func (s *FileValueStore) String() string {
+	return fmt.Sprintf("Values: %s", humanize.Bytes(uint64(s.Length())))
+}
+
 func (s *FileValueStore) Append(key Hash, value []byte) (*KeyValue, error) {
-	length := int64(SizeOfKeyValue(value))
-	id := ValueId(atomic.AddInt64(&s.length, length) - length)
+	size := int64(SizeOfKeyValue(value))
+	length := atomic.AddInt64(&s.length, size)
+	id := ValueId(length - size)
 	kv := NewKeyValue(id, key, value)
 	if _, err := kv.WriteTo(s.f); err != nil {
 		return nil, err
@@ -96,8 +124,7 @@ func (s *FileValueStore) Append(key Hash, value []byte) (*KeyValue, error) {
 }
 
 func (s *FileValueStore) Get(id ValueId) (*KeyValue, error) {
-	length := atomic.LoadInt64(&s.length)
-	r := io.NewSectionReader(s.f, int64(id), length)
+	r := io.NewSectionReader(s.f, int64(id), s.Length()-int64(id))
 	var kv KeyValue
 	if _, err := kv.ReadFrom(r); err != nil {
 		return nil, err
@@ -106,8 +133,7 @@ func (s *FileValueStore) Get(id ValueId) (*KeyValue, error) {
 }
 
 func (s *FileValueStore) Each(f func(*KeyValue)) error {
-	length := atomic.LoadInt64(&s.length)
-	r := io.NewSectionReader(s.f, 0, length)
+	r := io.NewSectionReader(s.f, 0, s.Length())
 	var kv KeyValue
 	for _, err := kv.ReadFrom(r); ; _, err = kv.ReadFrom(r) {
 		switch {

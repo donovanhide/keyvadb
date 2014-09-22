@@ -12,6 +12,7 @@ type KeyStore interface {
 	Get(id NodeId, degree uint64) (*Node, error)
 	Close() error
 	Sync() error
+	Length() int64
 }
 
 type ValueStore interface {
@@ -20,6 +21,7 @@ type ValueStore interface {
 	Each(func(*KeyValue)) error
 	Close() error
 	Sync() error
+	Length() int64
 }
 
 type Journal interface {

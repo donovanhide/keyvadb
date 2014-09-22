@@ -1,8 +1,11 @@
 package keyvadb
 
 import (
+	"fmt"
 	"sync/atomic"
 	"time"
+
+	"github.com/dustin/go-humanize"
 
 	"github.com/golang/glog"
 )
@@ -55,6 +58,7 @@ type DB struct {
 	buffer   *Buffer
 	flushing chan bool
 	lastsync int64
+	inserts  uint64
 }
 
 func newDB(conf *DBConfig) (*DB, error) {
@@ -71,6 +75,7 @@ func newDB(conf *DBConfig) (*DB, error) {
 		buffer:   NewBuffer(conf.batch),
 		flushing: make(chan (bool), 1),
 		DBConfig: conf,
+		lastsync: int64(time.Second),
 	}
 	go db.flusher()
 	return db, nil
@@ -91,6 +96,7 @@ func (db *DB) Add(key Hash, value []byte) error {
 	if err != nil {
 		return err
 	}
+	atomic.AddUint64(&db.inserts, 1)
 	if length := db.buffer.Add(kv.CloneKey()); length > db.batch {
 		//throttle
 		wait := time.Duration(atomic.LoadInt64(&db.lastsync)) / time.Duration(db.batch)
@@ -112,7 +118,7 @@ func (db *DB) Get(hash Hash) (*KeyValue, error) {
 
 func (db *DB) flusher() {
 	flushing := false
-	tick := time.NewTicker(time.Second)
+	tick := time.NewTicker(time.Second / 10)
 	for {
 		select {
 		case flushing = <-db.flushing:
@@ -144,7 +150,8 @@ func (db *DB) flush() {
 	db.flushing <- false
 	duration := time.Now().Sub(start)
 	atomic.StoreInt64(&db.lastsync, int64(duration))
-	glog.Infof("Flushed %d keys in %0.2f secs %02.f keys/sec", len(keys), duration.Seconds(), float64(len(keys))/duration.Seconds())
+	rate := float64(len(keys)) / duration.Seconds()
+	glog.Infof("%s Flushed %s keys in %0.2f secs %02.f keys/sec", db, humanize.Comma(int64(len(keys))), duration.Seconds(), rate)
 }
 
 type KeyValueFunc func(*KeyValue)
@@ -162,4 +169,9 @@ func (db *DB) Range(start, end Hash, f KeyValueFunc) error {
 		f(kv)
 		return nil
 	})
+}
+
+func (db *DB) String() string {
+	inserts := humanize.Comma(int64(atomic.LoadUint64(&db.inserts)))
+	return fmt.Sprintf("DB: Inserts: %s Buffer: %d %s %s", inserts, db.buffer.Len(), db.values, db.keys)
 }

@@ -44,6 +44,7 @@ func (j *SimpleJournal) Swap(current, previous *Node) {
 
 func (j *SimpleJournal) Commit() error {
 	for _, delta := range j.deltas {
+		delta.current.Dirty = false
 		if err := j.keys.Set(delta.current); err != nil {
 			return err
 		}
