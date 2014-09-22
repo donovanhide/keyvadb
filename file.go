@@ -3,6 +3,7 @@ package keyvadb
 import (
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"sync/atomic"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/siddontang/go/ioutil2"
 )
 
-func NewFileKeyStore(degree uint64, filename string) (KeyStore, error) {
+func NewFileKeyStore(degree, cacheLevels uint64, filename string) (KeyStore, error) {
 	f, err := os.OpenFile(filename+".keys", os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return nil, err
@@ -23,7 +24,8 @@ func NewFileKeyStore(degree uint64, filename string) (KeyStore, error) {
 		// TODO: truncate instead?
 		return nil, fmt.Errorf("Corrupt key store")
 	}
-	cacheSize := int(1 + degree + degree*degree) // Enough for top three levels
+	// Sum of consecutive powers of degree
+	cacheSize := int(math.Pow(float64(degree), float64(cacheLevels)) - 1/(float64(degree)-1))
 	return &FileKeyStore{
 		f:      f,
 		length: fi.Size(),

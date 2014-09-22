@@ -35,7 +35,7 @@ func (s *KeyVaSuite) TestMemoryDB(c *C) {
 func (s *KeyVaSuite) TestFileDB(c *C) {
 	os.Remove("test.values")
 	os.Remove("test.keys")
-	db, err := NewFileDB(84, 10000, "Distance", "test")
+	db, err := NewFileDB(84, 3, 10000, "Distance", "test")
 	c.Assert(err, IsNil)
 	s.fillDB(10, 10000, db, c)
 }

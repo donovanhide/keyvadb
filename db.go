@@ -22,12 +22,12 @@ func NewMemoryDB(degree, batch uint64, balancer string) (*DB, error) {
 	})
 }
 
-func NewFileDB(degree, batch uint64, balancer, filename string) (*DB, error) {
+func NewFileDB(degree, cacheLevels, batch uint64, balancer, filename string) (*DB, error) {
 	values, err := NewFileValueStore(filename)
 	if err != nil {
 		return nil, err
 	}
-	keys, err := NewFileKeyStore(degree, filename)
+	keys, err := NewFileKeyStore(degree, cacheLevels, filename)
 	if err != nil {
 		return nil, err
 	}

@@ -20,6 +20,7 @@ import (
 var port = flag.Int("port", 9000, "port to listen on")
 var degree = flag.Uint64("degree", 84, "degree of tree")
 var batch = flag.Uint64("batch", 10000, "batch size")
+var cache = flag.Uint64("cache", 4, "number of levels of tree to cache (4 is around 2.4GB)")
 var name = flag.String("name", "db", "name of database")
 var balancer = flag.String("balancer", "Distance", "balancer to use")
 
@@ -121,7 +122,7 @@ func accept(ln net.Listener, db *keyvadb.DB, done chan bool) {
 func main() {
 	flag.Parse()
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	db, err := keyvadb.NewFileDB(*degree, *batch, *balancer, *name)
+	db, err := keyvadb.NewFileDB(*degree, *cache, *batch, *balancer, *name)
 	checkErr(err)
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	checkErr(err)
