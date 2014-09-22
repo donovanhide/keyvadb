@@ -97,7 +97,7 @@ func (db *DB) Add(key Hash, value []byte) error {
 		return err
 	}
 	atomic.AddUint64(&db.inserts, 1)
-	if length := db.buffer.Add(kv.CloneKey()); length > db.batch {
+	if length := db.buffer.Add(kv.CloneKey()); length > db.batch*3 {
 		//throttle
 		wait := time.Duration(atomic.LoadInt64(&db.lastsync)) / time.Duration(db.batch)
 		time.Sleep(wait)
