@@ -33,39 +33,37 @@ func (t *Tree) add(n *Node, keys KeySlice, journal Journal) (insertions int, err
 		panic("no values to add")
 	}
 	debugPrintln(n)
-	// TODO: make copy lazy in balancer!
-	current := n.Clone()
-	remainder, dirty := t.balancer.Balance(current, keys)
-	debugPrintln(n)
+	current, remainder := t.balancer.Balance(n, keys)
 	insertions = len(keys) - len(remainder)
-	if *debug && !n.SanityCheck() {
+	if *debug && !current.SanityCheck() {
 		panic(fmt.Sprintf("not sane:\n%s", n))
 	}
-	err = current.Each(func(id NodeId, start, end Hash) (NodeId, error) {
+	err = current.Each(func(i int, cid NodeId, start, end Hash) error {
 		candidates := remainder.GetRange(start, end)
 		if len(candidates) == 0 {
-			return id, nil
+			return nil
 		}
 		var child *Node
-		if id.Empty() {
+		if cid.Empty() {
 			if child, err = t.keys.New(start, end, t.Degree); err != nil {
-				return id, nil
+				return err
 			}
-			id = child.Id
-			dirty = true
+			current = current.CloneIfClean()
+			current.Children[i] = child.Id
 		} else {
-			if child, err = t.keys.Get(id, t.Degree); err != nil {
-				return id, err
+			if child, err = t.keys.Get(cid, t.Degree); err != nil {
+				return err
 			}
 		}
 		childInsertions, err := t.add(child, candidates, journal)
 		insertions += childInsertions
-		return id, err
+		return err
 	})
+	debugPrintln(current)
 	if err != nil {
 		return
 	}
-	if dirty {
+	if current.Dirty {
 		journal.Swap(current, n)
 	}
 	return
@@ -144,11 +142,11 @@ func (t *Tree) each(id NodeId, level int, f NodeFunc) error {
 	if err := f(level, n); err != nil {
 		return err
 	}
-	return n.Each(func(id NodeId, start, end Hash) (NodeId, error) {
-		if id.Empty() {
-			return id, nil
+	return n.Each(func(i int, cid NodeId, start, end Hash) error {
+		if cid.Empty() {
+			return nil
 		}
-		return id, t.each(id, level+1, f)
+		return t.each(cid, level+1, f)
 	})
 }
 

@@ -7,15 +7,15 @@ type Delta struct {
 	previous *Node
 }
 
-func (d *Delta) NewKeys() int {
+func (d Delta) NewKeys() int {
 	return d.current.Occupancy() - d.previous.Occupancy()
 }
 
-func (d *Delta) NewChildren() int {
+func (d Delta) NewChildren() int {
 	return d.current.ChildCount() - d.previous.ChildCount()
 }
 
-func (d *Delta) String() string {
+func (d Delta) String() string {
 	return fmt.Sprintf("%016d New Keys: %03d: New Children: %03d", d.current.Id, d.NewKeys(), d.NewChildren())
 }
 

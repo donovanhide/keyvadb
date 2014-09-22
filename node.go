@@ -11,7 +11,7 @@ import (
 type NodeId uint64
 
 type NodeFunc func(int, *Node) error
-type ChildFunc func(NodeId, Hash, Hash) (NodeId, error)
+type ChildFunc func(int, NodeId, Hash, Hash) error
 
 func (id NodeId) Empty() bool {
 	return id == EmptyChild
@@ -23,6 +23,7 @@ type Node struct {
 	End      Hash
 	Keys     KeySlice
 	Children []NodeId
+	Dirty    bool
 }
 
 func NewNode(start, end Hash, id NodeId, degree uint64) *Node {
@@ -35,6 +36,14 @@ func NewNode(start, end Hash, id NodeId, degree uint64) *Node {
 	}
 }
 
+func (n *Node) CloneIfClean() *Node {
+	if !n.Dirty {
+		n = n.Clone()
+		n.Dirty = true
+	}
+	return n
+}
+
 func (n *Node) Clone() *Node {
 	c := &Node{
 		Id:    n.Id,
@@ -45,17 +54,6 @@ func (n *Node) Clone() *Node {
 	c.Children = make([]NodeId, len(n.Children))
 	copy(c.Children, n.Children)
 	return c
-}
-
-func (n *Node) GetChildRange(i int) (Hash, Hash) {
-	switch i {
-	case 0:
-		return n.Start, n.Keys[0].Hash
-	case n.MaxEntries():
-		return n.Keys[i-1].Hash, n.End
-	default:
-		return n.Keys[i-1].Hash, n.Keys[i].Hash
-	}
 }
 
 func (n *Node) Empty(i int) bool {
@@ -149,27 +147,28 @@ func (n *Node) MaxChildren() int {
 	return len(n.Children)
 }
 
-func (n *Node) update(f ChildFunc, i int, start, end Hash) error {
-	if !start.Empty() && !end.Empty() {
-		id, err := f(n.Children[i], start, end)
-		if err != nil {
-			return err
-		}
-		n.Children[i] = id
+func (n *Node) GetChildRange(i int) (Hash, Hash) {
+	switch i {
+	case 0:
+		return n.Start, n.Keys[0].Hash
+	case n.MaxEntries():
+		return n.Keys[i-1].Hash, n.End
+	default:
+		return n.Keys[i-1].Hash, n.Keys[i].Hash
 	}
-	return nil
 }
 
 func (n *Node) Each(f ChildFunc) error {
-	if err := n.update(f, 0, n.Start, n.Keys[0].Hash); err != nil {
-		return err
-	}
-	for i := range n.Keys[:len(n.Keys)-1] {
-		if err := n.update(f, i+1, n.Keys[i].Hash, n.Keys[i+1].Hash); err != nil {
+	for i := range n.Children {
+		start, end := n.GetChildRange(i)
+		if start.Empty() || end.Empty() {
+			continue
+		}
+		if err := f(i, n.Children[i], start, end); err != nil {
 			return err
 		}
 	}
-	return n.update(f, len(n.Keys), n.Keys[len(n.Keys)-1].Hash, n.End)
+	return nil
 }
 
 func (n *Node) String() string {
@@ -177,8 +176,10 @@ func (n *Node) String() string {
 	for i := range n.Keys {
 		items = append(items, fmt.Sprintf("%08d\t%s", i, n.Keys[i]))
 	}
-	format := "Id:\t\t%d\nWell Formed:\t%t\nOccupancy:\t%d\nChildren:\t%+v\nStart:\t\t%s\nEnd:\t\t%s\nDistance:\t%s\nStride:\t\t%s\n--------\n%s\n--------"
-	return fmt.Sprintf(format, n.Id, n.SanityCheck(), n.Occupancy(), n.Children, n.Start, n.End, n.Distance(), n.Stride(), strings.Join(items, "\n"))
+	format := "Id:\t\t%d\nDirty:\t\t%t\nWell Formed:\t%t\nOccupancy:\t%d\n"
+	format += "Children:\t%+v\nStart:\t\t%s\nEnd:\t\t%s\nDistance:\t%s\n"
+	format += "Stride:\t\t%s\n--------\n%s\n--------"
+	return fmt.Sprintf(format, n.Id, n.Dirty, n.SanityCheck(), n.Occupancy(), n.Children, n.Start, n.End, n.Distance(), n.Stride(), strings.Join(items, "\n"))
 }
 
 func (n *Node) Len() int           { return len(n.Keys) }

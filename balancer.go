@@ -27,24 +27,26 @@ func newBalancer(name string) (Balancer, error) {
 type BufferBalancer struct{}
 type DistanceBalancer struct{}
 
-func (b *BufferBalancer) Balance(n *Node, s KeySlice) (KeySlice, bool) {
+func (b *BufferBalancer) Balance(n *Node, s KeySlice) (*Node, KeySlice) {
 	occupied := n.Occupancy()
 	// Check for duplicate entries in full node
 	if occupied == n.MaxEntries() {
 		for _, key := range n.Keys {
 			s.Remove(key)
 		}
-		return s, false
+		return n, s
 	}
 	union := n.NonEmptyKeys().Union(s)
 	// Shortcut all duplicates in non full node
 	if len(union) == occupied {
-		return nil, false
+		return n, nil
 	}
+	// Copy on write
+	n = n.CloneIfClean()
 	// Node not full, insert entries on the right
 	if len(union) <= n.MaxEntries() {
 		copy(n.Keys[n.MaxEntries()-len(union):], union)
-		return nil, true
+		return n, nil
 	}
 	// Randomly select entries from union
 	picks := balancerRandom.Perm(len(union))[:n.MaxEntries()]
@@ -56,27 +58,29 @@ func (b *BufferBalancer) Balance(n *Node, s KeySlice) (KeySlice, bool) {
 	for _, key := range n.Keys {
 		union.Remove(key)
 	}
-	return union, true
+	return n, union
 }
 
-func (b *DistanceBalancer) Balance(n *Node, s KeySlice) (KeySlice, bool) {
+func (b *DistanceBalancer) Balance(n *Node, s KeySlice) (*Node, KeySlice) {
 	occupied := n.Occupancy()
 	// Check for duplicate entries in full node
 	if occupied == n.MaxEntries() {
 		for _, key := range n.Keys {
 			s.Remove(key)
 		}
-		return s, false
+		return n, s
 	}
 	union := n.NonEmptyKeys().Union(s)
 	// Shortcut all duplicates in non full node
 	if len(union) == occupied {
-		return nil, false
+		return n, nil
 	}
+	// Copy on write
+	n = n.CloneIfClean()
 	// Node not full, insert entries on the right
 	if len(union) <= n.MaxEntries() {
 		copy(n.Keys[n.MaxEntries()-len(union):], union)
-		return nil, true
+		return n, nil
 	}
 	// Merge and place in order
 	n.AddSyntheticKeys()
@@ -84,5 +88,5 @@ func (b *DistanceBalancer) Balance(n *Node, s KeySlice) (KeySlice, bool) {
 		n.UpdateEntry(index-1, distance.Key)
 		union.Remove(distance.Key)
 	}
-	return union, true
+	return n, union
 }

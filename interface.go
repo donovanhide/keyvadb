@@ -31,5 +31,5 @@ type Journal interface {
 }
 
 type Balancer interface {
-	Balance(*Node, KeySlice) (KeySlice, bool)
+	Balance(*Node, KeySlice) (*Node, KeySlice)
 }

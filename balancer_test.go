@@ -16,9 +16,9 @@ func (s *KeyVaSuite) TestBalancers(c *C) {
 	degree := uint64(8)
 	for _, b := range Balancers {
 		node := NewNode(start, end, 0, degree)
-		remainder, dirty := b.Balancer.Balance(node, neighbourValues)
+		current, remainder := b.Balancer.Balance(node, neighbourValues)
 		c.Assert(len(remainder), Equals, 0)
-		c.Assert(dirty, Equals, true)
-		c.Assert(node.SanityCheck(), Equals, true, Commentf("%s is not sane", b.Name))
+		c.Assert(current, Not(Equals), node)
+		c.Assert(current.SanityCheck(), Equals, true, Commentf("%s is not sane", b.Name))
 	}
 }
